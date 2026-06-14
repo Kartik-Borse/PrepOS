@@ -1,0 +1,19 @@
+.bookmarks-page { display: flex; flex-direction: column; gap: 20px; max-width: 800px; }
+.page-header-row h1 { font-size: 22px; font-weight: 700; }
+.page-header-row .sub { font-size: 13px; color: var(--text-dim); margin-top: 4px; }
+
+.bm-list {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden;
+}
+.bm-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 14px 20px; border-bottom: 1px solid var(--border);
+  transition: background 0.1s;
+}
+.bm-row:last-child { border-bottom: none; }
+.bm-row:hover { background: var(--surface2); }
+.bm-info { flex: 1; }
+.bm-title { display: block; font-size: 14px; font-weight: 500; }
+.bm-row:hover .bm-title { color: var(--primary); }
+.bm-pattern { display: block; font-size: 12px; color: var(--text-dim); margin-top: 2px; }
+.bm-diff { font-size: 12px; font-weight: 600; }

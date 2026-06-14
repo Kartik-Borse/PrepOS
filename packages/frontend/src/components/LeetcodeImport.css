@@ -1,0 +1,153 @@
+.lc-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.6);
+  backdrop-filter: blur(4px);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 1000;
+  padding: 16px;
+}
+
+.lc-modal {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  width: 100%; max-width: 520px;
+  box-shadow: 0 24px 64px rgba(0,0,0,0.4);
+  overflow: hidden;
+}
+
+.lc-modal-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.lc-modal-title {
+  display: flex; align-items: center; gap: 8px;
+  font-weight: 600; font-size: 15px;
+  color: var(--text);
+}
+
+.lc-close {
+  color: var(--text-dim); padding: 4px; border-radius: 6px;
+  display: flex; align-items: center;
+}
+.lc-close:hover { background: var(--surface2); color: var(--text); }
+
+.lc-modal-body { padding: 20px; display: flex; flex-direction: column; gap: 16px; }
+
+.lc-hint { font-size: 13px; color: var(--text-dim); margin: 0; }
+
+.lc-input-row { display: flex; gap: 8px; }
+
+.lc-url-input {
+  flex: 1;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 9px 12px;
+  font-size: 13px;
+  color: var(--text);
+  outline: none;
+}
+.lc-url-input:focus { border-color: var(--primary); }
+.lc-url-input::placeholder { color: var(--text-faint); }
+
+.lc-fetch-btn {
+  background: var(--primary); color: #000;
+  font-weight: 600; font-size: 13px;
+  padding: 9px 18px; border-radius: 8px;
+  cursor: pointer; white-space: nowrap;
+  display: flex; align-items: center; gap: 6px;
+  min-width: 72px; justify-content: center;
+}
+.lc-fetch-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.spin { animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.lc-error {
+  background: rgba(239,68,68,0.1);
+  border: 1px solid rgba(239,68,68,0.3);
+  color: #f87171;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 13px;
+}
+
+.lc-result { display: flex; flex-direction: column; gap: 10px; }
+
+.lc-result-header {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 13px; color: #22c55e; font-weight: 500;
+}
+
+.lc-problem-card {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px;
+  display: flex; flex-direction: column; gap: 10px;
+}
+
+.lc-problem-top {
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 8px;
+}
+
+.lc-problem-title {
+  font-size: 15px; font-weight: 600; color: var(--text);
+  margin: 0; flex: 1;
+}
+
+.lc-diff-badge { font-size: 12px; font-weight: 600; white-space: nowrap; }
+
+.lc-problem-meta { font-size: 12px; color: var(--text-dim); }
+
+.lc-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.lc-tag {
+  background: var(--surface); border: 1px solid var(--border);
+  color: var(--text-dim); font-size: 11px;
+  padding: 3px 8px; border-radius: 20px;
+}
+
+.lc-companies { display: flex; flex-wrap: wrap; gap: 6px; }
+.lc-company {
+  background: rgba(248,159,27,0.1); border: 1px solid rgba(248,159,27,0.25);
+  color: var(--primary); font-size: 11px;
+  padding: 3px 8px; border-radius: 20px;
+}
+
+.lc-description-preview {
+  font-size: 12px; color: var(--text-dim);
+  line-height: 1.6;
+  max-height: 80px; overflow: hidden;
+}
+
+.lc-result-actions {
+  display: flex; gap: 8px; justify-content: flex-end; padding-top: 4px;
+}
+
+.lc-btn-primary {
+  background: var(--primary); color: #000;
+  font-weight: 600; font-size: 13px;
+  padding: 8px 16px; border-radius: 8px; cursor: pointer;
+}
+.lc-btn-secondary {
+  display: flex; align-items: center; gap: 6px;
+  background: var(--surface); border: 1px solid var(--border);
+  color: var(--text); font-size: 13px;
+  padding: 8px 14px; border-radius: 8px; cursor: pointer;
+  text-decoration: none;
+}
+.lc-btn-secondary:hover { border-color: var(--primary); }
+
+.lc-examples { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.lc-examples span { font-size: 11px; color: var(--text-faint); }
+.lc-example-url {
+  font-size: 11px; color: var(--primary);
+  background: rgba(248,159,27,0.08);
+  padding: 3px 8px; border-radius: 4px;
+  border: 1px solid rgba(248,159,27,0.2);
+  cursor: pointer; font-family: monospace;
+}
+.lc-example-url:hover { background: rgba(248,159,27,0.15); }

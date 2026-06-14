@@ -1,0 +1,66 @@
+.resume-builder-page { display: flex; flex-direction: column; gap: 20px; max-width: 900px; }
+.rb-header { display: flex; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+.rb-header h1 { font-size: 22px; font-weight: 700; }
+.rb-header .sub { font-size: 13px; color: var(--text-dim); margin-top: 4px; }
+.rb-actions { display: flex; gap: 8px; }
+.rb-btn { display: flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; border: 1px solid; }
+.rb-btn.preview { background: var(--surface2); border-color: var(--border); color: var(--text-dim); }
+.rb-btn.preview:hover { border-color: var(--primary); color: var(--primary); }
+.rb-btn.export { background: var(--primary); border-color: var(--primary); color: #000; }
+.rb-btn.export:hover { opacity: 0.9; }
+
+.rb-form { display: flex; flex-direction: column; gap: 20px; }
+.rb-section { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px; display: flex; flex-direction: column; gap: 14px; }
+.rb-section h2 { font-size: 14px; font-weight: 700; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.05em; }
+.rb-section-header { display: flex; align-items: center; justify-content: space-between; }
+.add-row-btn { display: flex; align-items: center; gap: 5px; background: none; border: 1px solid var(--border); border-radius: 6px; padding: 5px 12px; font-size: 12px; color: var(--text-dim); cursor: pointer; }
+.add-row-btn:hover { border-color: var(--primary); color: var(--primary); }
+
+.rb-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.rb-field { display: flex; flex-direction: column; gap: 5px; }
+.rb-field label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-faint); }
+.rb-field input, .rb-field textarea {
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 8px; padding: 8px 12px;
+  font-size: 13px; color: var(--text); font-family: inherit;
+  outline: none; width: 100%;
+}
+.rb-field input:focus, .rb-field textarea:focus { border-color: var(--primary); }
+.rb-field textarea { resize: vertical; }
+
+.project-card { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+.proj-row { display: flex; align-items: flex-end; gap: 10px; }
+.flex-1 { flex: 1; }
+.del-proj-btn { width: 32px; height: 32px; border-radius: 6px; border: 1px solid var(--border); background: none; color: var(--text-dim); cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-bottom: 0; }
+.del-proj-btn:hover { border-color: var(--error); color: var(--error); }
+
+/* Preview */
+.rb-preview-wrapper { display: flex; justify-content: center; }
+.rb-preview {
+  background: #fff; color: #000;
+  width: 210mm; min-height: 297mm;
+  padding: 18mm 16mm;
+  font-family: 'Georgia', 'Times New Roman', serif;
+  font-size: 11pt; line-height: 1.5;
+  box-shadow: 0 4px 40px rgba(0,0,0,0.3);
+  border-radius: 4px;
+}
+
+.rp-header { text-align: center; margin-bottom: 12pt; }
+.rp-header h1 { font-size: 20pt; font-weight: 700; margin-bottom: 4pt; color: #000; }
+.rp-contact { font-size: 10pt; color: #333; }
+.rp-contact span { margin: 0 4px; }
+
+.rp-section { margin-bottom: 12pt; }
+.rp-section-title { font-size: 10pt; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; border-bottom: 1.5px solid #000; padding-bottom: 2pt; margin-bottom: 6pt; color: #000; }
+
+.rp-row-space { display: flex; justify-content: space-between; align-items: flex-start; }
+.rp-sub { font-size: 10pt; color: #555; }
+.rp-right { text-align: right; font-size: 10pt; }
+.rp-skills { font-size: 10pt; white-space: pre-line; }
+
+.rp-project { margin-bottom: 8pt; }
+.rp-tech { font-size: 10pt; color: #555; margin-left: 6pt; }
+.rp-desc { font-size: 10pt; white-space: pre-line; margin-top: 2pt; color: #222; }
+
+@media (max-width: 700px) { .rb-grid-2 { grid-template-columns: 1fr; } }

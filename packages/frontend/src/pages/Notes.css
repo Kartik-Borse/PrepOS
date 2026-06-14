@@ -1,0 +1,62 @@
+.notes-page { height: calc(100vh - var(--topbar-h) - 48px); display: flex; flex-direction: column; overflow: hidden; }
+
+.notes-layout { display: grid; grid-template-columns: 300px 1fr; gap: 0; flex: 1; overflow: hidden; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); }
+
+/* Sidebar */
+.notes-sidebar { border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }
+
+.notes-sidebar-header { display: flex; align-items: center; justify-content: space-between; padding: 16px; border-bottom: 1px solid var(--border); }
+.notes-sidebar-header h1 { font-size: 18px; font-weight: 700; }
+
+.new-note-btn { width: 30px; height: 30px; border-radius: 8px; background: var(--primary); color: #000; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; font-weight: 700; }
+.new-note-btn:hover { opacity: 0.9; }
+
+.notes-search { display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-bottom: 1px solid var(--border); }
+.ns-icon { color: var(--text-dim); flex-shrink: 0; }
+.notes-search input { background: none; border: none; padding: 0; font-size: 13px; color: var(--text); flex: 1; outline: none; }
+
+.notes-list { flex: 1; overflow-y: auto; }
+
+.notes-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; height: 100%; color: var(--text-faint); padding: 24px; text-align: center; }
+.notes-empty p { font-size: 13px; }
+.btn-sm-primary { background: var(--primary); color: #000; font-size: 12px; font-weight: 600; padding: 6px 14px; border-radius: 6px; border: none; cursor: pointer; }
+
+.note-item { padding: 12px 16px; border-bottom: 1px solid var(--border); cursor: pointer; transition: background 0.1s; }
+.note-item:hover { background: var(--surface2); }
+.note-item.active { background: var(--primary-dim); border-left: 3px solid var(--primary); }
+
+.ni-title { font-size: 13px; font-weight: 600; margin-bottom: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ni-preview { font-size: 12px; color: var(--text-dim); margin-bottom: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ni-meta { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.ni-visited { display: flex; align-items: center; gap: 4px; font-size: 11px; color: var(--text-faint); }
+.ni-tag { background: var(--border); border-radius: 3px; padding: 1px 6px; font-size: 10px; color: var(--text-dim); }
+
+/* Editor */
+.notes-editor { display: flex; flex-direction: column; overflow: hidden; }
+
+.ne-toolbar { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+
+.ne-title-input { flex: 1; background: none; border: none; font-size: 18px; font-weight: 700; color: var(--text); outline: none; padding: 0; }
+.ne-title-input::placeholder { color: var(--text-faint); }
+
+.ne-actions { display: flex; align-items: center; gap: 8px; }
+.ne-meta { font-size: 11px; color: var(--text-faint); white-space: nowrap; }
+
+.save-btn { background: var(--primary); color: #000; font-weight: 600; font-size: 12px; padding: 5px 14px; border-radius: 6px; border: none; cursor: pointer; white-space: nowrap; }
+.save-btn:hover { opacity: 0.9; }
+
+.del-btn { width: 28px; height: 28px; border-radius: 6px; border: 1px solid var(--border); background: none; color: var(--text-dim); cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.del-btn:hover { border-color: var(--error); color: var(--error); }
+
+.ne-tags-row { display: flex; align-items: center; gap: 8px; padding: 8px 16px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+.tag-icon { color: var(--text-faint); flex-shrink: 0; }
+.ne-tags-input { flex: 1; background: none; border: none; font-size: 12px; color: var(--text-dim); outline: none; }
+
+.ne-textarea { flex: 1; resize: none; background: none; border: none; padding: 16px; font-size: 14px; color: var(--text); font-family: inherit; line-height: 1.7; outline: none; overflow-y: auto; }
+
+/* Empty state */
+.notes-empty-editor { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; text-align: center; padding: 40px; }
+.notes-empty-editor h2 { font-size: 18px; font-weight: 700; }
+.notes-empty-editor p { font-size: 13px; color: var(--text-dim); }
+.btn-primary-lg { background: var(--primary); color: #000; font-weight: 700; font-size: 14px; padding: 10px 22px; border-radius: 10px; border: none; cursor: pointer; }
+.btn-primary-lg:hover { opacity: 0.9; }
