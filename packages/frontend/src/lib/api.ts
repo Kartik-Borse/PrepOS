@@ -4,7 +4,7 @@
  * In prod: uses VITE_API_URL env var pointing to deployed backend
  */
 
-const BASE_URL = import.meta.env.VITE_API_URL ?? '';
+const BASE_URL = (import.meta.env.VITE_API_URL ?? '').replace(/\/$/, '');
 
 function getToken(): string | null {
   return localStorage.getItem('token');
