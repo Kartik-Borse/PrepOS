@@ -1,6 +1,7 @@
 /**
  * Authentication Routes
  * Handles user registration and login endpoints
+ * Validates: Requirements 1.1, 1.3, 1.6
  */
 
 import express, { Request, Response } from 'express';
@@ -12,6 +13,7 @@ const router = express.Router();
 /**
  * POST /api/auth/register
  * Register a new user with email and password
+ * Validates: Requirements 1.1, 1.3, 1.6
  */
 router.post('/register', async (req: Request, res: Response) => {
   try {
@@ -85,6 +87,7 @@ router.post('/register', async (req: Request, res: Response) => {
 /**
  * POST /api/auth/login
  * Authenticate user with email and password
+ * Validates: Requirements 1.1
  */
 router.post('/login', async (req: Request, res: Response) => {
   try {
@@ -144,6 +147,7 @@ router.post('/login', async (req: Request, res: Response) => {
 /**
  * GET /api/auth/me
  * Verify the current JWT and return token identity claims.
+ * Validates: Requirements 1.4, 1.7
  */
 router.get('/me', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
   return res.status(200).json({
