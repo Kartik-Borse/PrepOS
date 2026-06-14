@@ -97,8 +97,23 @@ This will start:
 
 ### Database Setup
 
-The database schema is automatically loaded when PostgreSQL starts via docker-compose. To manually run migrations:
+The database schema and initial seed data are defined in a unified file `database/schema.sql`.
 
+To initialize or reset the database, you can either:
+
+1. Use the backend's migration runner:
+```bash
+# Apply schema and seeds
+npm run migrate:up --workspace=backend
+
+# Check status of the database tables
+npm run migrate:status --workspace=backend
+
+# Reset database (drops all tables)
+npm run migrate:down --workspace=backend
+```
+
+2. Or run the SQL file manually against the Docker container:
 ```bash
 docker exec -i placement-preparation-platform-postgres-1 psql -U placement_user -d placement_prep < database/schema.sql
 ```

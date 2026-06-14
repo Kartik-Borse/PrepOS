@@ -1,6 +1,6 @@
 /**
  * Database Migration Runner
- * Applies SQL migration files from database/migrations directory
+ * Applies the unified database/schema.sql to set up the database.
  */
 
 import { Pool } from 'pg';
@@ -18,236 +18,119 @@ const pool = new Pool({
   connectionString: DATABASE_URL,
 });
 
-// Migration tracking table
-const MIGRATIONS_TABLE = 'schema_migrations';
+const SCHEMA_FILE_PATH = path.join(__dirname, '../../../../database/schema.sql');
 
 /**
- * Initialize migrations tracking table
- */
-async function initializeMigrationsTable(): Promise<void> {
-  const client = await pool.connect();
-  try {
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS ${MIGRATIONS_TABLE} (
-        id SERIAL PRIMARY KEY,
-        migration_name VARCHAR(255) UNIQUE NOT NULL,
-        applied_at TIMESTAMP DEFAULT NOW()
-      )
-    `);
-    console.log('✓ Migrations tracking table ready');
-  } finally {
-    client.release();
-  }
-}
-
-/**
- * Get list of applied migrations
- */
-async function getAppliedMigrations(): Promise<string[]> {
-  const client = await pool.connect();
-  try {
-    const result = await client.query(
-      `SELECT migration_name FROM ${MIGRATIONS_TABLE} ORDER BY id`
-    );
-    return result.rows.map(row => row.migration_name);
-  } finally {
-    client.release();
-  }
-}
-
-/**
- * Mark migration as applied
- */
-async function recordMigration(migrationName: string): Promise<void> {
-  const client = await pool.connect();
-  try {
-    await client.query(
-      `INSERT INTO ${MIGRATIONS_TABLE} (migration_name) VALUES ($1)`,
-      [migrationName]
-    );
-  } finally {
-    client.release();
-  }
-}
-
-/**
- * Remove migration from tracking table
- */
-async function removeMigration(migrationName: string): Promise<void> {
-  const client = await pool.connect();
-  try {
-    await client.query(
-      `DELETE FROM ${MIGRATIONS_TABLE} WHERE migration_name = $1`,
-      [migrationName]
-    );
-  } finally {
-    client.release();
-  }
-}
-
-/**
- * Get all migration files from database/migrations directory
- */
-function getMigrationFiles(): string[] {
-  const migrationsDir = path.join(__dirname, '../../../../database/migrations');
-  
-  if (!fs.existsSync(migrationsDir)) {
-    console.error('❌ Migrations directory not found:', migrationsDir);
-    return [];
-  }
-
-  const files = fs.readdirSync(migrationsDir);
-  
-  // Filter for .sql files excluding rollback files
-  return files
-    .filter(file => file.endsWith('.sql') && !file.includes('rollback'))
-    .sort();
-}
-
-/**
- * Apply a single migration file
- */
-async function applyMigration(migrationFile: string): Promise<void> {
-  const migrationsDir = path.join(__dirname, '../../../../database/migrations');
-  const migrationPath = path.join(migrationsDir, migrationFile);
-  
-  console.log(`Applying migration: ${migrationFile}`);
-  
-  const sql = fs.readFileSync(migrationPath, 'utf-8');
-  const client = await pool.connect();
-  
-  try {
-    await client.query('BEGIN');
-    await client.query(sql);
-    await recordMigration(migrationFile);
-    await client.query('COMMIT');
-    console.log(`✓ Applied: ${migrationFile}`);
-  } catch (error) {
-    await client.query('ROLLBACK');
-    console.error(`❌ Failed to apply ${migrationFile}:`, error);
-    throw error;
-  } finally {
-    client.release();
-  }
-}
-
-/**
- * Rollback a single migration
- */
-async function rollbackMigration(migrationFile: string): Promise<void> {
-  const migrationsDir = path.join(__dirname, '../../../../database/migrations');
-  const rollbackFile = migrationFile.replace('.sql', '_rollback.sql');
-  const rollbackPath = path.join(migrationsDir, rollbackFile);
-  
-  if (!fs.existsSync(rollbackPath)) {
-    console.error(`❌ Rollback file not found: ${rollbackFile}`);
-    throw new Error(`Rollback file not found for ${migrationFile}`);
-  }
-  
-  console.log(`Rolling back migration: ${migrationFile}`);
-  
-  const sql = fs.readFileSync(rollbackPath, 'utf-8');
-  const client = await pool.connect();
-  
-  try {
-    await client.query('BEGIN');
-    await client.query(sql);
-    await removeMigration(migrationFile);
-    await client.query('COMMIT');
-    console.log(`✓ Rolled back: ${migrationFile}`);
-  } catch (error) {
-    await client.query('ROLLBACK');
-    console.error(`❌ Failed to rollback ${migrationFile}:`, error);
-    throw error;
-  } finally {
-    client.release();
-  }
-}
-
-/**
- * Run all pending migrations
+ * Apply the unified database schema (up migration)
  */
 async function migrateUp(): Promise<void> {
-  console.log('🚀 Starting database migrations...\n');
+  console.log('🚀 Initializing database schema...\n');
   
-  await initializeMigrationsTable();
-  
-  const appliedMigrations = await getAppliedMigrations();
-  const migrationFiles = getMigrationFiles();
-  
-  const pendingMigrations = migrationFiles.filter(
-    file => !appliedMigrations.includes(file)
-  );
-  
-  if (pendingMigrations.length === 0) {
-    console.log('✓ No pending migrations\n');
-    return;
+  if (!fs.existsSync(SCHEMA_FILE_PATH)) {
+    console.error('❌ Schema file not found:', SCHEMA_FILE_PATH);
+    throw new Error(`Schema file not found at ${SCHEMA_FILE_PATH}`);
   }
+
+  const sql = fs.readFileSync(SCHEMA_FILE_PATH, 'utf-8');
+  const client = await pool.connect();
   
-  console.log(`Found ${pendingMigrations.length} pending migration(s)\n`);
-  
-  for (const migrationFile of pendingMigrations) {
-    await applyMigration(migrationFile);
+  try {
+    await client.query('BEGIN');
+    await client.query(sql);
+    await client.query('COMMIT');
+    console.log('✓ Database schema and seed data applied successfully.');
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('❌ Failed to apply database schema:', error);
+    throw error;
+  } finally {
+    client.release();
   }
-  
-  console.log('\n✓ All migrations completed successfully');
 }
 
 /**
- * Rollback the last migration
+ * Drop all database tables, views, triggers, functions (down migration/rollback)
  */
 async function migrateDown(): Promise<void> {
-  console.log('🔄 Rolling back last migration...\n');
+  console.log('🔄 Cleaning up database schema (dropping all tables)...\n');
   
-  await initializeMigrationsTable();
-  
-  const appliedMigrations = await getAppliedMigrations();
-  
-  if (appliedMigrations.length === 0) {
-    console.log('✓ No migrations to rollback\n');
-    return;
+  const dropTablesSql = `
+    DROP TABLE IF EXISTS leaderboard_snapshots CASCADE;
+    DROP TABLE IF EXISTS study_plans CASCADE;
+    DROP TABLE IF EXISTS ai_interview_sessions CASCADE;
+    DROP TABLE IF EXISTS cs_mcqs CASCADE;
+    DROP TABLE IF EXISTS cs_topics CASCADE;
+    DROP TABLE IF EXISTS user_mock_attempts CASCADE;
+    DROP TABLE IF EXISTS mock_tests CASCADE;
+    DROP TABLE IF EXISTS aptitude_questions CASCADE;
+    DROP TABLE IF EXISTS aptitude_categories CASCADE;
+    DROP TABLE IF EXISTS user_badges CASCADE;
+    DROP TABLE IF EXISTS badges CASCADE;
+    DROP TABLE IF EXISTS streak_history CASCADE;
+    DROP TABLE IF EXISTS user_problem_progress CASCADE;
+    DROP TABLE IF EXISTS submissions CASCADE;
+    DROP TABLE IF EXISTS test_cases CASCADE;
+    DROP TABLE IF EXISTS problems CASCADE;
+    DROP TABLE IF EXISTS dsa_patterns CASCADE;
+    DROP TABLE IF EXISTS users CASCADE;
+    DROP FUNCTION IF EXISTS update_updated_at_column CASCADE;
+  `;
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    await client.query(dropTablesSql);
+    await client.query('COMMIT');
+    console.log('✓ All tables and database objects dropped successfully.');
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('❌ Failed to drop database schema:', error);
+    throw error;
+  } finally {
+    client.release();
   }
-  
-  const lastMigration = appliedMigrations[appliedMigrations.length - 1];
-  await rollbackMigration(lastMigration);
-  
-  console.log('\n✓ Rollback completed successfully');
 }
 
 /**
- * Show migration status
+ * Show database initialization status
  */
 async function showStatus(): Promise<void> {
-  console.log('📊 Migration Status\n');
+  console.log('📊 Database Status\n');
   
-  await initializeMigrationsTable();
-  
-  const appliedMigrations = await getAppliedMigrations();
-  const migrationFiles = getMigrationFiles();
-  
-  console.log('Applied Migrations:');
-  if (appliedMigrations.length === 0) {
-    console.log('  (none)');
-  } else {
-    appliedMigrations.forEach(migration => {
-      console.log(`  ✓ ${migration}`);
+  const client = await pool.connect();
+  try {
+    // Query pg_tables to check which of our key tables exist
+    const result = await client.query(`
+      SELECT tablename 
+      FROM pg_tables 
+      WHERE schemaname = 'public' 
+      AND tablename IN ('users', 'problems', 'dsa_patterns', 'submissions')
+    `);
+    
+    const existingTables = result.rows.map(row => row.tablename);
+    const requiredTables = ['users', 'problems', 'dsa_patterns', 'submissions'];
+    
+    console.log('Key Tables Check:');
+    requiredTables.forEach(table => {
+      const exists = existingTables.includes(table);
+      console.log(`  ${exists ? '✓' : '○'} ${table}`);
     });
+    
+    console.log('');
+    if (existingTables.length === requiredTables.length) {
+      console.log('Status: Database is FULLY INITIALIZED.');
+    } else if (existingTables.length > 0) {
+      console.log('Status: Database is PARTIALLY INITIALIZED.');
+    } else {
+      console.log('Status: Database is NOT INITIALIZED.');
+    }
+    console.log('');
+  } catch (error) {
+    console.error('❌ Failed to check database status:', error);
+    throw error;
+  } finally {
+    client.release();
   }
-  
-  console.log('\nPending Migrations:');
-  const pendingMigrations = migrationFiles.filter(
-    file => !appliedMigrations.includes(file)
-  );
-  
-  if (pendingMigrations.length === 0) {
-    console.log('  (none)');
-  } else {
-    pendingMigrations.forEach(migration => {
-      console.log(`  ○ ${migration}`);
-    });
-  }
-  
-  console.log('');
 }
 
 /**
@@ -271,9 +154,9 @@ async function main() {
         console.log('Usage: npm run migrate <command>');
         console.log('');
         console.log('Commands:');
-        console.log('  up      - Apply all pending migrations');
-        console.log('  down    - Rollback the last migration');
-        console.log('  status  - Show migration status');
+        console.log('  up      - Apply database schema and seed data');
+        console.log('  down    - Drop all database tables (destructive)');
+        console.log('  status  - Show database initialization status');
         process.exit(1);
     }
   } catch (error) {
