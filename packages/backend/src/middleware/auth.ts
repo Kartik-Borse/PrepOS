@@ -1,6 +1,5 @@
 /**
  * JWT authentication middleware for protected API routes.
- * Validates: Requirements 1.4, 1.7
  */
 
 import { NextFunction, Request, Response } from 'express';
