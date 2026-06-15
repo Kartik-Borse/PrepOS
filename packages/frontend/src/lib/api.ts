@@ -1,10 +1,14 @@
 /**
  * API client — wraps fetch with auth token injection and base URL.
- * In dev: empty string uses Vite proxy (/api/* → localhost:5000)
- * In prod: uses VITE_API_URL env var pointing to deployed backend
+ * In dev:  empty string → Vite proxy (/api/* → localhost:5000)
+ * In prod: hardcoded backend URL (no env var required)
  */
 
-const BASE_URL = (import.meta.env.VITE_API_URL ?? '').replace(/\/$/, '');
+// In development the Vite proxy handles /api/* so BASE_URL stays empty.
+// In production we point directly at the deployed backend.
+const BASE_URL = import.meta.env.DEV
+  ? ''
+  : 'https://prep-os-backend.vercel.app';
 
 function getToken(): string | null {
   return localStorage.getItem('token');
@@ -20,7 +24,10 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     headers['Authorization'] = `Bearer ${token}`;
   }
 
-  const res = await fetch(`${BASE_URL}${path}`, { ...options, headers });
+  // Collapse any accidental double-slashes (e.g. BASE_URL ends with "/" and path starts with "/")
+  // but leave the protocol "https://" untouched.
+  const url = `${BASE_URL}${path}`.replace(/([^:])\/\/+/g, '$1/');
+  const res = await fetch(url, { ...options, headers });
   const data = await res.json();
 
   if (!res.ok) {
