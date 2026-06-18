@@ -28,7 +28,18 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   // but leave the protocol "https://" untouched.
   const url = `${BASE_URL}${path}`.replace(/([^:])\/\/+/g, '$1/');
   const res = await fetch(url, { ...options, headers });
-  const data = await res.json();
+  
+  let data: any;
+  const contentType = res.headers.get("content-type");
+  if (contentType && contentType.includes("application/json")) {
+    data = await res.json();
+  } else {
+    const text = await res.text();
+    if (!res.ok) {
+      throw new Error(`API Error: ${res.status} ${res.statusText}`);
+    }
+    data = { message: text };
+  }
 
   if (!res.ok) {
     const message = data?.error?.message || data?.message || 'Request failed';

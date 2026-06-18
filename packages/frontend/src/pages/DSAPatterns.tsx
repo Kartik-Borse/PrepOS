@@ -536,7 +536,7 @@ export default function DSAPatterns() {
           <SortableContext items={allPatterns.map((p) => p.id)} strategy={rectSortingStrategy}>
             <div className="patterns-grid">
               {allPatterns.map((p) => {
-                const total = patternCounts[p.id] ?? p.count;
+                const total = patternCounts[p.id] || 0;
                 const solved = Object.keys(solvedProblems).filter((pid) =>
                   allProblems.find((prob) => prob.id === pid && prob.patternId === p.id)
                 ).length;

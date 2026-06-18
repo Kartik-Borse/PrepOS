@@ -77,7 +77,12 @@ router.post('/fetch', async (req: Request, res: Response) => {
       return res.status(502).json({ error: { code: 'LC_FETCH_FAILED', message: `LeetCode returned ${lcRes.status}` } });
     }
 
-    const data = await lcRes.json() as any;
+    let data: any;
+    try {
+      data = await lcRes.json();
+    } catch (err) {
+      return res.status(502).json({ error: { code: 'LC_PARSE_FAILED', message: 'LeetCode returned an invalid JSON response' } });
+    }
     const q = data?.data?.question;
 
     if (!q) {
