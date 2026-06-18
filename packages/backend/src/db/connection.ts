@@ -21,6 +21,10 @@ pool.on('error', (err: Error) => {
   process.exit(-1);
 });
 
+// Auto-migrate schema changes to support cloud deployments
+pool.query('ALTER TABLE problems ADD COLUMN IF NOT EXISTS meta_data JSONB;')
+  .catch(err => console.error('Failed to auto-migrate meta_data column:', err.message));
+
 /**
  * Execute a query with automatic connection management
  */

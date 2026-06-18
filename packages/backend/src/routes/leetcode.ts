@@ -38,7 +38,12 @@ function slugFromUrl(url: string): string | null {
   // handles: https://leetcode.com/problems/two-sum/
   //          https://leetcode.com/problems/two-sum/description/
   const match = url.match(/leetcode\.com\/problems\/([^/]+)/);
-  return match ? match[1] : null;
+  if (match) return match[1];
+  
+  // if it's already just a slug, e.g., "two-sum"
+  if (/^[a-zA-Z0-9-]+$/.test(url)) return url;
+  
+  return null;
 }
 
 function stripHtml(html: string): string {
