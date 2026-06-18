@@ -476,6 +476,7 @@ export default function DSAPatterns() {
   const [diffFilter, setDiffFilter] = useState<'All' | 'Easy' | 'Medium' | 'Hard'>('All');
   const [patternFilter, setPatternFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState<'All' | 'Solved' | 'Unsolved'>('All');
+  const [allProblemsSortBy, setAllProblemsSortBy] = useState<'latest' | 'difficulty-asc' | 'difficulty-desc' | 'title-asc' | 'title-desc' | 'unsolved-first'>('latest');
 
   // Merge and sort patterns — first apply user-defined order
   const builtinPatterns = BUILTIN_PATTERNS.map((p) => ({ ...p, isCustom: false }));
@@ -503,16 +504,23 @@ export default function DSAPatterns() {
     return acc;
   }, {});
 
-  // All Problems — sorted by latest solve then latest added
+  // All Problems — sorted by user-selected sort
   const allProblemsSorted = [...allProblems].sort((a, b) => {
     const aS = solvedProblems[a.id];
     const bS = solvedProblems[b.id];
-    if (aS && bS) return new Date(bS.solvedAt).getTime() - new Date(aS.solvedAt).getTime();
-    if (aS) return -1;
-    if (bS) return 1;
-    const aA = a.addedAt ? new Date(a.addedAt).getTime() : 0;
-    const bA = b.addedAt ? new Date(b.addedAt).getTime() : 0;
-    return bA - aA;
+    const dMap: Record<string, number> = { Easy: 1, Medium: 2, Hard: 3 };
+    switch (allProblemsSortBy) {
+      case 'latest':
+        if (aS && bS) return new Date(bS.solvedAt).getTime() - new Date(aS.solvedAt).getTime();
+        if (aS) return -1; if (bS) return 1;
+        return new Date(b.addedAt ?? 0).getTime() - new Date(a.addedAt ?? 0).getTime();
+      case 'difficulty-asc':  return (dMap[a.difficulty] ?? 2) - (dMap[b.difficulty] ?? 2);
+      case 'difficulty-desc': return (dMap[b.difficulty] ?? 2) - (dMap[a.difficulty] ?? 2);
+      case 'title-asc':  return a.title.localeCompare(b.title);
+      case 'title-desc': return b.title.localeCompare(a.title);
+      case 'unsolved-first': return (!aS ? -1 : !bS ? 1 : 0);
+      default: return 0;
+    }
   });
 
   const filteredProblems = allProblemsSorted.filter((p) => {
@@ -696,7 +704,22 @@ export default function DSAPatterns() {
             <span className="ap-stat-chip easy-chip">{filteredProblems.filter((p) => p.difficulty === 'Easy').length} Easy</span>
             <span className="ap-stat-chip medium-chip">{filteredProblems.filter((p) => p.difficulty === 'Medium').length} Medium</span>
             <span className="ap-stat-chip hard-chip">{filteredProblems.filter((p) => p.difficulty === 'Hard').length} Hard</span>
-            <span className="ap-stat-chip" style={{ marginLeft: 'auto', color: 'var(--primary)', borderColor: 'var(--primary-dim)' }}>↓ sorted by latest solve</span>
+            <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Sort</span>
+              <select
+                className="pattern-select"
+                value={allProblemsSortBy}
+                onChange={(e) => setAllProblemsSortBy(e.target.value as any)}
+                aria-label="Sort problems"
+              >
+                <option value="latest">Latest Solved First</option>
+                <option value="unsolved-first">Unsolved First</option>
+                <option value="difficulty-asc">Difficulty: Easy → Hard</option>
+                <option value="difficulty-desc">Difficulty: Hard → Easy</option>
+                <option value="title-asc">Title: A → Z</option>
+                <option value="title-desc">Title: Z → A</option>
+              </select>
+            </div>
           </div>
 
           {/* Table */}
