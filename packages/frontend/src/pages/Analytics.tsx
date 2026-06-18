@@ -3,38 +3,56 @@ import { useAuthStore } from '../store/useAuthStore';
 import { Sparkles } from 'lucide-react';
 import './Analytics.css';
 
-const patternData = [
-  { name: 'HashMap', pct: 86, color: '#3b82f6' },
-  { name: 'Two Pointers', pct: 79, color: '#8b5cf6' },
-  { name: 'Sliding Window', pct: 60, color: '#06b6d4' },
-  { name: 'Binary Search', pct: 73, color: '#f97316' },
-  { name: 'Graph Traversal', pct: 40, color: '#10b981' },
-  { name: 'Dynamic Programming', pct: 20, color: '#f59e0b' },
-  { name: 'Backtracking', pct: 23, color: '#a855f7' },
-  { name: 'Monotonic Stack', pct: 36, color: '#ec4899' },
-];
-
-const activityData = [4, 2, 6, 8, 3, 7, 5, 9, 4, 2, 6, 8, 5, 3, 7, 6, 4, 8, 5, 3, 9, 6, 7, 4, 5, 3, 6, 8, 4, 7];
-
 const companies = [
-  { name: 'Amazon', pct: 74, color: '#f97316' },
-  { name: 'TCS NQT', pct: 88, color: '#10b981' },
-  { name: 'Infosys', pct: 82, color: '#22c55e' },
-  { name: 'Microsoft', pct: 56, color: '#3b82f6' },
+  { name: 'Amazon',    pct: 74, color: '#f97316' },
+  { name: 'TCS NQT',  pct: 88, color: '#10b981' },
+  { name: 'Infosys',  pct: 82, color: '#22c55e' },
+  { name: 'Microsoft',pct: 56, color: '#3b82f6' },
   { name: 'Flipkart', pct: 61, color: '#8b5cf6' },
-  { name: 'Google', pct: 42, color: '#ef4444' },
+  { name: 'Google',   pct: 42, color: '#ef4444' },
 ];
 
 export default function Analytics() {
-  const { solvedProblems } = useAppStore();
+  const { solvedProblems, attempts } = useAppStore();
   const user = useAuthStore(s => s.user);
-  
+
   const solvedCount = Object.keys(solvedProblems).length;
   const solvedThisWeek = Object.values(solvedProblems).filter(p => new Date(p.solvedAt) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)).length;
-  const totalXp = solvedCount * 25;
-  const avgDaily = solvedCount > 0 ? (solvedCount / 30).toFixed(1) : '0'; // Mock average
+  const solvedToday = Object.values(solvedProblems).filter(p => new Date(p.solvedAt) > new Date(new Date().setHours(0,0,0,0))).length;
+  const avgDaily = solvedThisWeek > 0 ? (solvedThisWeek / 7).toFixed(1) : '0';
 
-  const maxActivity = Math.max(...activityData);
+  const easyVal  = Math.floor(solvedCount * 0.45) || 0;
+  const medVal   = Math.floor(solvedCount * 0.40) || 0;
+  const hardVal  = Math.max(0, solvedCount - easyVal - medVal);
+
+  // Real-time activity: actual solves per day for last 30 days
+  const activityData = Array.from({ length: 30 }, (_, i) => {
+    const date = new Date();
+    date.setDate(date.getDate() - (29 - i));
+    const dateStr = date.toDateString();
+    return Object.values(solvedProblems).filter(p => new Date(p.solvedAt).toDateString() === dateStr).length;
+  });
+  const maxActivity = Math.max(...activityData, 1);
+
+  // Real-time pattern mastery from attempts
+  const patternSolvedMap: Record<string, number> = {};
+  attempts.filter(a => a.status === 'Accepted').forEach(a => {
+    if (a.patternId) patternSolvedMap[a.patternId] = (patternSolvedMap[a.patternId] ?? 0) + 1;
+  });
+  const patternTotals: Record<string, number> = { hashmap: 31, 'two-pointers': 28, 'sliding-window': 30, 'binary-search': 26, graph: 35, dp: 45, backtracking: 30, 'monotonic-stack': 22 };
+  const patternDataLive = [
+    { name: 'HashMap',            id: 'hashmap',         color: '#3b82f6' },
+    { name: 'Two Pointers',       id: 'two-pointers',    color: '#8b5cf6' },
+    { name: 'Sliding Window',     id: 'sliding-window',  color: '#06b6d4' },
+    { name: 'Binary Search',      id: 'binary-search',   color: '#f97316' },
+    { name: 'Graph Traversal',    id: 'graph',           color: '#10b981' },
+    { name: 'Dynamic Programming',id: 'dp',              color: '#f59e0b' },
+    { name: 'Backtracking',       id: 'backtracking',    color: '#a855f7' },
+    { name: 'Monotonic Stack',    id: 'monotonic-stack', color: '#ec4899' },
+  ].map(p => ({
+    ...p,
+    pct: Math.min(100, Math.round(((patternSolvedMap[p.id] ?? 0) / (patternTotals[p.id] ?? 10)) * 100)),
+  }));
 
   return (
     <div className="analytics-page">
@@ -55,8 +73,8 @@ export default function Analytics() {
         {[
           { label: 'Problems Solved', value: `${solvedCount}`, delta: `+${solvedThisWeek} this week` },
           { label: 'Current Streak', value: `${user?.currentStreak ?? 1}d`, delta: `Best: ${Math.max(user?.currentStreak ?? 1, 12)}d` },
-          { label: 'Total XP', value: `${totalXp}`, delta: `Level ${Math.floor(totalXp/100) + 1}` },
-          { label: 'Avg Daily Problems', value: avgDaily, delta: 'Goal: 5/day' },
+          { label: 'Solved Today', value: `${solvedToday}`, delta: 'Goal: 5/day' },
+          { label: 'Avg Daily (7d)', value: avgDaily, delta: `${solvedThisWeek} this week` },
         ].map(k => (
           <div key={k.label} className="kpi-card">
             <div className="kpi-value">{k.value}</div>
@@ -78,7 +96,7 @@ export default function Analytics() {
       </div>
 
       <div className="analytics-grid">
-        {/* Activity chart */}
+        {/* Activity chart — real daily solves */}
         <section className="an-card wide">
           <div className="an-card-header">
             <div>
@@ -89,23 +107,23 @@ export default function Analytics() {
           <div className="bar-chart" aria-label="Daily activity bar chart">
             {activityData.map((v, i) => (
               <div key={i} className="bar-col">
-                <div className="bar-fill" style={{ height: `${(v / maxActivity) * 100}%`, background: v > 6 ? 'var(--primary)' : 'var(--border)' }} />
+                <div className="bar-fill" style={{ height: `${(v / maxActivity) * 100}%`, background: v > 3 ? 'var(--primary)' : v > 0 ? 'var(--border)' : 'var(--surface2)' }} />
                 {i % 5 === 0 && <span className="bar-label">{i + 1}</span>}
               </div>
             ))}
           </div>
         </section>
 
-        {/* Pattern breakdown */}
+        {/* Pattern breakdown — real-time */}
         <section className="an-card">
           <div className="an-card-header">
             <div>
               <h2>Pattern Mastery</h2>
-              <p className="sub">Completion across all patterns</p>
+              <p className="sub">Based on your accepted submissions</p>
             </div>
           </div>
           <div className="pattern-breakdown">
-            {patternData.map(p => (
+            {patternDataLive.map(p => (
               <div key={p.name} className="pb-row">
                 <span className="pb-name">{p.name}</span>
                 <div className="pb-bar-wrap">
@@ -152,9 +170,9 @@ export default function Analytics() {
           </div>
           <div className="diff-breakdown">
             {[
-              { label: 'Easy', value: Math.floor(solvedCount * 0.45) || 0, color: 'var(--easy)' },
-              { label: 'Medium', value: Math.floor(solvedCount * 0.40) || 0, color: 'var(--medium)' },
-              { label: 'Hard', value: Math.floor(solvedCount * 0.15) || 0, color: 'var(--hard)' },
+              { label: 'Easy',   value: easyVal, color: 'var(--easy)' },
+              { label: 'Medium', value: medVal,  color: 'var(--medium)' },
+              { label: 'Hard',   value: hardVal, color: 'var(--hard)' },
             ].map(d => (
               <div key={d.label} className="db-row">
                 <span className="db-label" style={{ color: d.color }}>{d.label}</span>

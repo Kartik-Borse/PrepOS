@@ -1,6 +1,6 @@
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { CheckCircle2, Circle, RotateCcw, Link2, Plus, Trash2, X } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import LeetcodeImport from '../components/LeetcodeImport';
 import { useAppStore, Problem } from '../store/useAppStore';
 import { BUILTIN_PROBLEMS } from './DSAPatterns';
@@ -32,10 +32,7 @@ const PATTERN_NAMES: Record<string, string> = {
 
 type Status = 'all' | 'solved' | 'revision' | 'unsolved';
 type Difficulty = 'All' | 'Easy' | 'Medium' | 'Hard';
-type SortBy = 'latest' | 'difficulty' | 'title';
-
-const diffColor = (d: string) =>
-  d === 'Easy' ? 'var(--easy)' : d === 'Medium' ? 'var(--medium)' : 'var(--hard)';
+type SortBy = 'latest' | 'oldest' | 'difficulty-asc' | 'difficulty-desc' | 'title-asc' | 'title-desc' | 'unsolved-first';
 
 const StatusIcon = ({ s }: { s: string }) =>
   s === 'solved'   ? <CheckCircle2 size={15} style={{ color: 'var(--success)' }} /> :
@@ -116,6 +113,40 @@ function AddQuestionModal({
   );
 }
 
+// ── Resizable columns hook ────────────────────────────────────────────────────
+const DEFAULT_WIDTHS = { num: 40, status: 36, title: 300, diff: 110, comp: 220, lc: 50, del: 36 };
+type ColKey = keyof typeof DEFAULT_WIDTHS;
+
+function useResizableCols() {
+  const [widths, setWidths] = useState(DEFAULT_WIDTHS);
+  const dragging = useRef<{ col: ColKey; startX: number; startW: number } | null>(null);
+
+  const onMouseDown = useCallback((col: ColKey, e: React.MouseEvent) => {
+    e.preventDefault();
+    dragging.current = { col, startX: e.clientX, startW: widths[col] };
+
+    const onMove = (ev: MouseEvent) => {
+      if (!dragging.current) return;
+      const delta = ev.clientX - dragging.current.startX;
+      const min = col === 'num' || col === 'status' || col === 'del' ? 28 : 60;
+      const newW = Math.max(min, dragging.current.startW + delta);
+      setWidths(w => ({ ...w, [dragging.current!.col]: newW }));
+    };
+    const onUp = () => {
+      dragging.current = null;
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+    };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+  }, [widths]);
+
+  const gridTemplate = Object.values(widths).map(w => `${w}px`).join(' ');
+  const totalWidth = Object.values(widths).reduce((a, b) => a + b, 0) + 80; // padding
+
+  return { widths, gridTemplate, totalWidth, onMouseDown };
+}
+
 // ── Main Component ─────────────────────────────────────────────────────────────
 export default function ProblemList() {
   const { patternId = 'two-pointers' } = useParams();
@@ -128,12 +159,14 @@ export default function ProblemList() {
     customPatterns,
   } = useAppStore();
 
-  const [filter, setFilter]           = useState<Difficulty>('All');
+  const [filter, setFilter]             = useState<Difficulty>('All');
   const [statusFilter, setStatusFilter] = useState<Status>('all');
-  const [sortBy, setSortBy]           = useState<SortBy>('latest');
+  const [sortBy, setSortBy]             = useState<SortBy>('latest');
   const [showLCImport, setShowLCImport] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<Problem | null>(null);
+
+  const { gridTemplate, totalWidth, onMouseDown } = useResizableCols();
 
   // Pattern name (built-in or custom)
   const customPattern = customPatterns.find((p) => p.id === patternId);
@@ -146,22 +179,36 @@ export default function ProblemList() {
   );
   const customForPattern = customProblems.filter((p) => p.patternId === patternId);
 
-  // Sort: most recently solved first, then most recently added, then rest
+  // Sort
   const sorted = [...builtinForPattern, ...customForPattern].sort((a, b) => {
-    if (sortBy === 'latest') {
-      const aS = solvedProblems[a.id];
-      const bS = solvedProblems[b.id];
-      if (aS && bS) return new Date(bS.solvedAt).getTime() - new Date(aS.solvedAt).getTime();
-      if (aS) return -1;
-      if (bS) return 1;
-      const aA = a.addedAt ? new Date(a.addedAt).getTime() : 0;
-      const bA = b.addedAt ? new Date(b.addedAt).getTime() : 0;
-      return bA - aA;
-    } else if (sortBy === 'difficulty') {
-      const dMap = { Easy: 1, Medium: 2, Hard: 3 };
-      return dMap[a.difficulty] - dMap[b.difficulty];
-    } else {
-      return a.title.localeCompare(b.title);
+    const aS = solvedProblems[a.id];
+    const bS = solvedProblems[b.id];
+    const dMap: Record<string, number> = { Easy: 1, Medium: 2, Hard: 3 };
+
+    switch (sortBy) {
+      case 'latest':
+        if (aS && bS) return new Date(bS.solvedAt).getTime() - new Date(aS.solvedAt).getTime();
+        if (aS) return -1;
+        if (bS) return 1;
+        return new Date(b.addedAt ?? 0).getTime() - new Date(a.addedAt ?? 0).getTime();
+      case 'oldest':
+        return new Date(a.addedAt ?? 0).getTime() - new Date(b.addedAt ?? 0).getTime();
+      case 'difficulty-asc':
+        return (dMap[a.difficulty] ?? 2) - (dMap[b.difficulty] ?? 2);
+      case 'difficulty-desc':
+        return (dMap[b.difficulty] ?? 2) - (dMap[a.difficulty] ?? 2);
+      case 'title-asc':
+        return a.title.localeCompare(b.title);
+      case 'title-desc':
+        return b.title.localeCompare(a.title);
+      case 'unsolved-first':
+        const aUnsolved = !aS;
+        const bUnsolved = !bS;
+        if (aUnsolved && !bUnsolved) return -1;
+        if (!aUnsolved && bUnsolved) return 1;
+        return 0;
+      default:
+        return 0;
     }
   });
 
@@ -189,60 +236,88 @@ export default function ProblemList() {
         {/* Header */}
         <div className="plp-header">
           <Link to="/dsa" className="back-link">← DSA Patterns</Link>
-          <h1>{patternName}</h1>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: 'var(--text-dim)' }}>
-            <span>{sorted.length} problems</span>
-            <span>·</span>
-            <select value={sortBy} onChange={(e) => setSortBy(e.target.value as SortBy)} style={{ background: 'transparent', border: 'none', color: 'var(--text-dim)', fontSize: '13px', cursor: 'pointer', outline: 'none' }}>
-              <option value="latest">↓ Sorted by Latest Solve</option>
-              <option value="difficulty">Sorted by Difficulty</option>
-              <option value="title">Sorted by Title</option>
-            </select>
-          </div>
-          <div className="plp-header-btns">
-            <button className="btn-lc-import-sm" onClick={() => setShowLCImport(true)}>
-              <Link2 size={13} /> Import from LeetCode
-            </button>
-            <button className="btn-add-q" onClick={() => setShowAddModal(true)}>
-              <Plus size={13} /> Add Question
-            </button>
+          <div className="plp-header-row">
+            <h1>{patternName}</h1>
+            <div className="plp-header-btns">
+              <button className="btn-lc-import-sm" onClick={() => setShowLCImport(true)}>
+                <Link2 size={13} /> Import from LeetCode
+              </button>
+              <button className="btn-add-q" onClick={() => setShowAddModal(true)}>
+                <Plus size={13} /> Add Question
+              </button>
+            </div>
           </div>
         </div>
 
-        {/* Filters */}
-        <div className="plp-filters">
-          <div className="filter-group">
-            {(['All', 'Easy', 'Medium', 'Hard'] as Difficulty[]).map((d) => (
-              <button key={d} className={`filter-btn ${filter === d ? 'active' : ''}`} onClick={() => setFilter(d)}>
-                {d}
-              </button>
-            ))}
+        {/* Toolbar: filters + sort */}
+        <div className="plp-toolbar">
+          <div className="plp-filters">
+            <div className="filter-group">
+              {(['All', 'Easy', 'Medium', 'Hard'] as Difficulty[]).map((d) => (
+                <button key={d} className={`filter-btn ${filter === d ? 'active' : ''}`} onClick={() => setFilter(d)}>{d}</button>
+              ))}
+            </div>
+            <div className="filter-group">
+              {(['all', 'solved', 'revision', 'unsolved'] as Status[]).map((s) => (
+                <button key={s} className={`filter-btn ${statusFilter === s ? 'active' : ''}`} onClick={() => setStatusFilter(s)}>
+                  {s.charAt(0).toUpperCase() + s.slice(1)}
+                </button>
+              ))}
+            </div>
           </div>
-          <div className="filter-group">
-            {(['all', 'solved', 'revision', 'unsolved'] as Status[]).map((s) => (
-              <button key={s} className={`filter-btn ${statusFilter === s ? 'active' : ''}`} onClick={() => setStatusFilter(s)}>
-                {s.charAt(0).toUpperCase() + s.slice(1)}
-              </button>
-            ))}
+          <div className="plp-sort-wrap">
+            <span className="plp-sort-label">Sort</span>
+            <select
+              className="plp-sort-select"
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as SortBy)}
+            >
+              <option value="latest">Latest Solved First</option>
+              <option value="oldest">Oldest Added First</option>
+              <option value="difficulty-asc">Difficulty: Easy → Hard</option>
+              <option value="difficulty-desc">Difficulty: Hard → Easy</option>
+              <option value="title-asc">Title: A → Z</option>
+              <option value="title-desc">Title: Z → A</option>
+              <option value="unsolved-first">Unsolved First</option>
+            </select>
           </div>
         </div>
 
         {/* Stats row */}
         <div className="plp-stats">
-          <span className="plp-stat-chip">{filtered.length} shown</span>
+          <span className="plp-stat-chip">{filtered.length} problems</span>
           <span className="plp-stat-chip easy-chip">{filtered.filter((p) => p.difficulty === 'Easy').length} Easy</span>
           <span className="plp-stat-chip medium-chip">{filtered.filter((p) => p.difficulty === 'Medium').length} Medium</span>
           <span className="plp-stat-chip hard-chip">{filtered.filter((p) => p.difficulty === 'Hard').length} Hard</span>
+          <span className="plp-stat-chip" style={{ marginLeft: 'auto', color: 'var(--success)' }}>
+            {Object.keys(solvedProblems).filter(id => filtered.some(p => p.id === id)).length} solved
+          </span>
         </div>
 
         {/* Table */}
-        <div className="problem-table">
-          <div className="pt-head">
-            <span className="col-status">Status</span>
-            <span className="col-title">Title</span>
-            <span className="col-diff">Difficulty</span>
-            <span className="col-comp">Companies</span>
-            <span className="col-lc" />
+        <div className="problem-table" style={{ minWidth: totalWidth }}>
+          <div className="pt-head" style={{ gridTemplateColumns: gridTemplate }}>
+            <span className="col-num">#</span>
+            <span className="col-status">
+              Status
+              <span className="col-resizer" onMouseDown={e => onMouseDown('status', e)} />
+            </span>
+            <span className="col-title">
+              Title
+              <span className="col-resizer" onMouseDown={e => onMouseDown('title', e)} />
+            </span>
+            <span className="col-diff">
+              Difficulty
+              <span className="col-resizer" onMouseDown={e => onMouseDown('diff', e)} />
+            </span>
+            <span className="col-comp">
+              Companies
+              <span className="col-resizer" onMouseDown={e => onMouseDown('comp', e)} />
+            </span>
+            <span className="col-lc">
+              LC
+              <span className="col-resizer" onMouseDown={e => onMouseDown('lc', e)} />
+            </span>
             <span className="col-del" />
           </div>
 
@@ -250,7 +325,7 @@ export default function ProblemList() {
             <div className="pt-empty">No problems match your filters.</div>
           )}
 
-          {filtered.map((p) => {
+          {filtered.map((p, idx) => {
             const status = solvedProblems[p.id]?.status;
             const latestSolve = solvedProblems[p.id];
 
@@ -258,26 +333,30 @@ export default function ProblemList() {
               <div
                 key={p.id}
                 className="pt-row"
+                style={{ gridTemplateColumns: gridTemplate }}
                 onClick={() => navigate(`/problem/${p.id}`)}
                 role="button"
                 tabIndex={0}
                 onKeyDown={(e) => e.key === 'Enter' && navigate(`/problem/${p.id}`)}
               >
+                <span className="col-num">{idx + 1}</span>
                 <span className="col-status"><StatusIcon s={status ?? 'unsolved'} /></span>
                 <span className="col-title">
-                  {p.title}
+                  <span className="pt-title-text">{p.title}</span>
                   {latestSolve && (
                     <span className="solved-time-badge">
                       {latestSolve.status === 'solved' ? '✓' : '↻'} {timeAgo(latestSolve.solvedAt)}
                     </span>
                   )}
                 </span>
-                <span className="col-diff" style={{ color: diffColor(p.difficulty) }}>{p.difficulty}</span>
+                <span className="col-diff">
+                  <span className={`diff-pill diff-${p.difficulty.toLowerCase()}`}>{p.difficulty}</span>
+                </span>
                 <span className="col-comp">
-                  {p.companies.slice(0, 2).map((c) => (
+                  {p.companies.slice(0, 3).map((c) => (
                     <span key={c} className="company-chip">{c}</span>
                   ))}
-                  {p.companies.length > 2 && <span className="company-chip">+{p.companies.length - 2}</span>}
+                  {p.companies.length > 3 && <span className="company-chip">+{p.companies.length - 3}</span>}
                 </span>
                 <span className="col-lc">
                   {p.leetcodeLink && (

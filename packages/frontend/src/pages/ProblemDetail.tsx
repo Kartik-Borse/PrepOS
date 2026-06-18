@@ -393,6 +393,12 @@ export default function ProblemDetail() {
     setTimeout(() => setNoteSaved(false), 1500);
   };
 
+  // Derive display number from id (e.g. "lc-3" → 3) or null for custom problems
+  const problemNumber = (() => {
+    const match = String(problem.id).match(/^lc-(\d+)$/);
+    return match ? match[1] : null;
+  })();
+
   const allPassed = results?.every((r) => r.passed);
   const passedCount = results?.filter((r) => r.passed).length ?? 0;
 
@@ -403,7 +409,9 @@ export default function ProblemDetail() {
         <div className="pd-breadcrumb">
           <Link to="/dsa" className="pd-back">← Problems</Link>
           <span>/</span>
-          <span className="pd-crumb">{SAMPLE_PROBLEM.number}. {SAMPLE_PROBLEM.title}</span>
+          <span className="pd-crumb">
+            {problemNumber ? `${problemNumber}. ` : ''}{problem.title}
+          </span>
         </div>
         <div className="pd-topbar-center">
           <button
@@ -417,7 +425,7 @@ export default function ProblemDetail() {
           </button>
         </div>
         <div className="pd-topbar-right">
-          <a href={SAMPLE_PROBLEM.leetcodeLink} target="_blank" rel="noreferrer" className="lc-link" title="View on LeetCode">
+          <a href={problem.leetcodeLink ?? SAMPLE_PROBLEM.leetcodeLink} target="_blank" rel="noreferrer" className="lc-link" title="View on LeetCode">
             <span>LC</span>
           </a>
           <button className={`pd-icon-btn ${bookmarked ? 'active' : ''}`} onClick={() => setBookmarked(!bookmarked)} aria-label="Bookmark">
@@ -625,7 +633,7 @@ export default function ProblemDetail() {
 
             {/* TC/SC Analysis */}
             {leftPanel === 'analysis' && (
-              <div className="pd-history tcsc-analysis-panel" style={{ background: '#000', borderRadius: '8px', padding: '16px', border: '1px solid var(--border)', height: '100%', display: 'flex', flexDirection: 'column' }}>
+              <div className="pd-history tcsc-analysis-panel" style={{ background: 'var(--surface2)', borderRadius: '8px', padding: '16px', border: '1px solid var(--border)', height: '100%', display: 'flex', flexDirection: 'column' }}>
                 <h2>Complexity Analysis</h2>
                 {!results ? (
                   <p className="empty-state">Run your code first to analyze complexity.</p>

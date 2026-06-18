@@ -256,6 +256,10 @@ interface AppState {
 
   solvedProblems: Record<string, { status: 'solved' | 'revision'; solvedAt: string; nextRevisionAt?: string }>;
   markSolved: (problemId: string, status: 'solved' | 'revision', nextRevisionAt?: string) => void;
+
+  // Cache for auto-fetched LC data (built-in problems)
+  lcCache: Record<string, { description: string; codeSnippets: any[] }>;
+  updateProblemMetaData: (id: string, metaData: any, description: string) => void;
 }
 
 const DEFAULT_RESUME: ResumeData = {
@@ -280,6 +284,12 @@ export const useAppStore = create<AppState>()(
       addProblem: (p) => set((s) => ({ customProblems: [...s.customProblems, { ...p, addedAt: p.addedAt ?? new Date().toISOString() }] })),
       updateProblem: (id, u) => set((s) => ({ customProblems: s.customProblems.map((p) => p.id === id ? { ...p, ...u } : p) })),
       deleteProblem: (id) => set((s) => ({ customProblems: s.customProblems.filter((p) => p.id !== id) })),
+
+      lcCache: {},
+      updateProblemMetaData: (id, metaData, description) => set((s) => ({
+        customProblems: s.customProblems.map((p) => p.id === id ? { ...p, metaData, description } : p),
+        lcCache: { ...s.lcCache, [id]: { description, codeSnippets: metaData.codeSnippets ?? [] } },
+      })),
 
       hiddenProblems: [],
       hideBuiltinProblem: (id) => set((s) => ({ hiddenProblems: [...s.hiddenProblems, id] })),

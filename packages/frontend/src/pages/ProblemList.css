@@ -1,28 +1,26 @@
 .problem-list-page {
-  display: flex; flex-direction: column; gap: 16px;
+  display: flex; flex-direction: column; gap: 14px;
 }
 
-/* Header */
+/* ── Header ── */
 .plp-header { display: flex; flex-direction: column; gap: 6px; }
 .back-link {
   font-size: 13px; color: var(--text-dim); text-decoration: none;
-  display: inline-flex; align-items: center; gap: 4px;
-  transition: color 0.15s;
+  display: inline-flex; align-items: center; gap: 4px; transition: color 0.15s;
 }
 .back-link:hover { color: var(--primary); }
 
-.plp-header h1 { font-size: 22px; font-weight: 700; }
-.plp-header .sub { font-size: 13px; color: var(--text-dim); }
-
-.plp-header-btns { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 4px; }
+.plp-header-row {
+  display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;
+}
+.plp-header-row h1 { font-size: 20px; font-weight: 700; }
+.plp-header-btns { display: flex; gap: 8px; flex-wrap: wrap; }
 
 .btn-lc-import-sm {
   display: flex; align-items: center; gap: 6px;
   background: var(--surface); color: var(--text);
-  border: 1px solid var(--border);
-  font-size: 12px; font-weight: 500;
-  padding: 6px 12px; border-radius: 8px; cursor: pointer;
-  white-space: nowrap;
+  border: 1px solid var(--border); font-size: 12px; font-weight: 500;
+  padding: 6px 12px; border-radius: 8px; cursor: pointer; white-space: nowrap;
 }
 .btn-lc-import-sm:hover { border-color: var(--primary); color: var(--primary); }
 
@@ -30,37 +28,56 @@
   display: flex; align-items: center; gap: 6px;
   background: var(--primary); color: #000;
   font-size: 12px; font-weight: 600;
-  padding: 6px 14px; border-radius: 8px; border: none; cursor: pointer;
-  white-space: nowrap;
+  padding: 6px 14px; border-radius: 8px; border: none; cursor: pointer; white-space: nowrap;
 }
 .btn-add-q:hover { opacity: 0.9; }
 
-/* Filters */
-.plp-filters { display: flex; gap: 10px; flex-wrap: wrap; }
+/* ── Toolbar ── */
+.plp-toolbar {
+  display: flex; align-items: center; justify-content: space-between;
+  flex-wrap: wrap; gap: 10px;
+}
+.plp-filters { display: flex; gap: 8px; flex-wrap: wrap; }
 
 .filter-group {
-  display: flex; gap: 3px;
+  display: flex; gap: 2px;
   background: var(--surface); border: 1px solid var(--border);
   border-radius: 8px; padding: 3px;
 }
 .filter-btn {
-  padding: 5px 12px; border-radius: 5px; font-size: 12px; font-weight: 500;
+  padding: 4px 11px; border-radius: 5px; font-size: 12px; font-weight: 500;
   color: var(--text-dim); background: none; border: none; cursor: pointer;
+  transition: background 0.1s, color 0.1s;
 }
 .filter-btn:hover { color: var(--text); background: var(--surface2); }
 .filter-btn.active { background: var(--primary); color: #000; font-weight: 700; }
 
-/* Stats row */
-.plp-stats { display: flex; gap: 8px; flex-wrap: wrap; }
+.plp-sort-wrap {
+  display: flex; align-items: center; gap: 8px; flex-shrink: 0;
+}
+.plp-sort-label {
+  font-size: 12px; font-weight: 600; color: var(--text-faint); text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.plp-sort-select {
+  background: var(--surface); border: 1px solid var(--border);
+  color: var(--text); font-size: 12px; font-weight: 500;
+  padding: 6px 10px; border-radius: 8px; cursor: pointer; outline: none;
+  transition: border-color 0.15s;
+}
+.plp-sort-select:hover, .plp-sort-select:focus { border-color: var(--primary); }
+
+/* ── Stats row ── */
+.plp-stats { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .plp-stat-chip {
   padding: 3px 12px; border-radius: 20px; font-size: 12px; font-weight: 500;
   background: var(--surface); border: 1px solid var(--border); color: var(--text-dim);
 }
-.easy-chip   { color: var(--easy);   border-color: rgba(0,184,163,0.3);   background: rgba(0,184,163,0.06); }
-.medium-chip { color: var(--medium); border-color: rgba(255,161,22,0.3);  background: rgba(255,161,22,0.06); }
-.hard-chip   { color: var(--hard);   border-color: rgba(239,71,67,0.3);   background: rgba(239,71,67,0.06); }
+.easy-chip   { color: var(--easy);   border-color: rgba(0,184,163,0.3);  background: rgba(0,184,163,0.06); }
+.medium-chip { color: var(--medium); border-color: rgba(255,161,22,0.3); background: rgba(255,161,22,0.06); }
+.hard-chip   { color: var(--hard);   border-color: rgba(239,71,67,0.3);  background: rgba(239,71,67,0.06); }
 
-/* Table */
+/* ── Table ── */
 .problem-table {
   background: var(--surface); border: 1px solid var(--border);
   border-radius: 12px; overflow-x: auto;
@@ -68,11 +85,10 @@
 
 .pt-head, .pt-row {
   display: grid;
-  grid-template-columns: 34px 2fr 90px 1.5fr 44px 36px;
-  min-width: 600px;
+  /* columns driven by inline style from JS */
   align-items: center;
-  padding: 10px 16px;
-  gap: 8px;
+  padding: 9px 16px;
+  gap: 0;
 }
 
 .pt-head {
@@ -80,6 +96,31 @@
   letter-spacing: 0.05em; color: var(--text-faint);
   border-bottom: 1px solid var(--border);
   background: var(--surface2);
+  border-radius: 12px 12px 0 0;
+  user-select: none;
+}
+
+/* Each header cell is relative so the resizer sits at its right edge */
+.pt-head span {
+  position: relative;
+  padding-right: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The drag handle */
+.col-resizer {
+  position: absolute; right: 0; top: 0;
+  width: 5px; height: 100%;
+  cursor: col-resize;
+  background: transparent;
+  transition: background 0.15s;
+  z-index: 1;
+  border-radius: 2px;
+}
+.col-resizer:hover, .col-resizer:active {
+  background: var(--primary);
 }
 
 .pt-row {
@@ -88,13 +129,24 @@
 }
 .pt-row:last-child { border-bottom: none; }
 .pt-row:hover { background: var(--surface2); }
-.pt-row:hover .col-title { color: var(--primary); }
+
+/* Cell padding for data rows */
+.pt-row > span { padding: 0 8px 0 0; overflow: hidden; }
+
+.col-num {
+  font-size: 12px; color: var(--text-faint); font-weight: 500; text-align: right;
+}
 
 .col-title {
   font-size: 13px; font-weight: 500;
   display: flex; align-items: center; gap: 8px;
-  overflow: hidden;
+  overflow: hidden; min-width: 0;
 }
+.pt-title-text {
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  transition: color 0.1s;
+}
+.pt-row:hover .pt-title-text { color: var(--primary); }
 
 .solved-time-badge {
   font-size: 10px; font-weight: 600; color: var(--text-faint);
@@ -102,24 +154,33 @@
   border-radius: 4px; padding: 1px 6px; white-space: nowrap; flex-shrink: 0;
 }
 
-.col-diff { font-size: 12px; font-weight: 700; }
+/* Difficulty pill */
+.diff-pill {
+  display: inline-block;
+  padding: 2px 10px; border-radius: 20px;
+  font-size: 11px; font-weight: 700;
+}
+.diff-easy   { color: var(--easy);   background: rgba(0,184,163,0.12);  border: 1px solid rgba(0,184,163,0.25); }
+.diff-medium { color: var(--medium); background: rgba(255,161,22,0.12); border: 1px solid rgba(255,161,22,0.25); }
+.diff-hard   { color: var(--hard);   background: rgba(239,71,67,0.12);  border: 1px solid rgba(239,71,67,0.25); }
 
-.col-comp { display: flex; flex-wrap: wrap; gap: 4px; }
+.col-comp { display: flex; flex-wrap: wrap; gap: 4px; min-width: 0; }
 .company-chip {
   background: var(--surface2); border: 1px solid var(--border);
   border-radius: 4px; padding: 1px 6px; font-size: 11px; color: var(--text-dim);
+  white-space: nowrap;
 }
 
+.col-lc { display: flex; align-items: center; }
 .lc-badge {
-  background: rgba(255,161,22,0.12); color: var(--warning);
+  background: rgba(255,161,22,0.1); color: var(--warning);
   border: 1px solid rgba(255,161,22,0.3);
-  border-radius: 4px; padding: 2px 7px;
-  font-size: 10px; font-weight: 800; text-decoration: none; display: inline-block;
+  border-radius: 5px; padding: 2px 8px;
+  font-size: 10px; font-weight: 800; text-decoration: none;
 }
-.lc-badge:hover { background: rgba(255,161,22,0.22); }
+.lc-badge:hover { background: rgba(255,161,22,0.2); }
 
 .col-del { display: flex; align-items: center; justify-content: flex-end; }
-
 .row-del-btn {
   display: flex; align-items: center; justify-content: center;
   width: 26px; height: 26px; border-radius: 6px;
@@ -130,18 +191,13 @@
 .pt-row:hover .row-del-btn { opacity: 1; }
 .row-del-btn:hover { color: var(--error); border-color: var(--error); background: rgba(239,71,67,0.08); }
 
-.pt-empty {
-  text-align: center; padding: 32px; font-size: 13px; color: var(--text-faint);
-}
+.pt-empty { text-align: center; padding: 40px; font-size: 13px; color: var(--text-faint); }
 
-/* ── Inline modals for ProblemList ── */
+/* ── Modals ── */
 .plp-modal-overlay {
-  position: fixed; inset: 0;
-  background: rgba(0,0,0,0.65);
-  display: flex; align-items: center; justify-content: center;
-  z-index: 1000;
+  position: fixed; inset: 0; background: rgba(0,0,0,0.65);
+  display: flex; align-items: center; justify-content: center; z-index: 1000;
 }
-
 .plp-modal-box {
   background: var(--surface); border: 1px solid var(--border);
   border-radius: 14px; width: 520px; max-width: 95vw;
@@ -153,14 +209,10 @@
   padding: 16px 20px; border-bottom: 1px solid var(--border);
 }
 .plp-modal-header h3 { font-size: 15px; font-weight: 700; }
-.plp-modal-header button {
-  color: var(--text-dim); background: none; border: none;
-  cursor: pointer; display: flex; align-items: center;
-}
+.plp-modal-header button { color: var(--text-dim); background: none; border: none; cursor: pointer; display: flex; align-items: center; }
 .plp-modal-header button:hover { color: var(--error); }
 
 .plp-modal-body { padding: 20px; display: flex; flex-direction: column; gap: 14px; }
-
 .plp-modal-footer {
   display: flex; justify-content: flex-end; gap: 10px;
   padding: 14px 20px; border-top: 1px solid var(--border);
@@ -170,42 +222,34 @@
 .plp-form-field label { font-size: 12px; font-weight: 600; color: var(--text-dim); }
 .plp-form-field input {
   background: var(--surface2); border: 1px solid var(--border);
-  border-radius: 8px; padding: 8px 12px;
-  font-size: 13px; color: var(--text); outline: none; width: 100%;
+  border-radius: 8px; padding: 8px 12px; font-size: 13px; color: var(--text); outline: none; width: 100%;
 }
 .plp-form-field input:focus { border-color: var(--primary); }
-
 .plp-form-row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 
 .plp-diff-toggle { display: flex; gap: 6px; }
 .plp-diff-chip {
   padding: 5px 14px; border-radius: 6px; font-size: 12px; font-weight: 600;
-  border: 1px solid var(--border); background: var(--surface2); cursor: pointer;
-  color: var(--text-dim);
+  border: 1px solid var(--border); background: var(--surface2); cursor: pointer; color: var(--text-dim);
 }
 .plp-diff-chip.easy.active   { background: rgba(0,184,163,0.15);  color: var(--easy);   border-color: var(--easy); }
 .plp-diff-chip.medium.active { background: rgba(255,161,22,0.15); color: var(--medium); border-color: var(--medium); }
 .plp-diff-chip.hard.active   { background: rgba(239,71,67,0.15);  color: var(--hard);   border-color: var(--hard); }
 
 .plp-btn-cancel {
-  padding: 7px 16px; border-radius: 8px;
-  border: 1px solid var(--border); background: none;
-  color: var(--text-dim); font-size: 13px; cursor: pointer;
+  padding: 7px 16px; border-radius: 8px; border: 1px solid var(--border);
+  background: none; color: var(--text-dim); font-size: 13px; cursor: pointer;
 }
 .plp-btn-cancel:hover { color: var(--text); }
-
 .plp-btn-primary {
-  padding: 7px 18px; border-radius: 8px;
-  background: var(--primary); color: #000;
+  padding: 7px 18px; border-radius: 8px; background: var(--primary); color: #000;
   font-size: 13px; font-weight: 700; border: none; cursor: pointer;
 }
 .plp-btn-primary:hover:not(:disabled) { opacity: 0.9; }
 .plp-btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
-
 .plp-btn-danger {
   display: flex; align-items: center; gap: 6px;
-  padding: 7px 18px; border-radius: 8px;
-  background: var(--error); color: #fff;
+  padding: 7px 18px; border-radius: 8px; background: var(--error); color: #fff;
   font-size: 13px; font-weight: 700; border: none; cursor: pointer;
 }
 .plp-btn-danger:hover { opacity: 0.85; }

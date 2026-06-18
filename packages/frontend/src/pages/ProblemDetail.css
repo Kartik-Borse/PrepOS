@@ -67,7 +67,10 @@
 .company-chip { background: var(--surface2); border: 1px solid var(--border); border-radius: 4px; padding: 1px 7px; font-size: 11px; color: var(--text-dim); }
 
 .pd-body-text { font-size: 13px; line-height: 1.7; }
-.pd-body-text p { margin-bottom: 12px; }
+.pd-body-text p { margin: 0 0 8px; }
+.pd-body-text ul, .pd-body-text ol { margin: 0 0 8px; padding-left: 20px; }
+.pd-body-text li { margin-bottom: 2px; }
+.pd-body-text pre { background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; padding: 10px 12px; margin-bottom: 10px; font-size: 12px; overflow-x: auto; white-space: pre-wrap; }
 .pd-body-text code { background: var(--surface2); border: 1px solid var(--border); border-radius: 3px; padding: 1px 5px; font-family: monospace; font-size: 12px; }
 .pd-body-text strong { color: var(--text); }
 
@@ -211,7 +214,7 @@
 }
 
 .approach-card {
-  background: #000; border: 1px solid var(--border);
+  background: var(--surface2); border: 1px solid var(--border);
   border-radius: 10px; padding: 14px; display: flex; flex-direction: column; gap: 10px;
 }
 

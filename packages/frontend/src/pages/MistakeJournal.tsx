@@ -12,6 +12,15 @@ const TYPE_COLOR: Record<string, string> = {
   'Off-by-one': '#f97316', 'Wrong data structure': '#3b82f6', 'Other': '#6b7280',
 };
 
+const TYPE_DESC: Record<string, string> = {
+  'Wrong logic':          'Your core algorithm was incorrect — the approach itself doesn\'t solve the problem.',
+  'Edge case missed':     'Solution worked for main cases but failed on boundary inputs like empty arrays, negatives, or single elements.',
+  'TLE':                  'Time Limit Exceeded — your solution is too slow (likely O(n²) or worse where O(n log n) is needed).',
+  'Off-by-one':           'Index was one too high or too low — common in loops, binary search, and sliding window boundaries.',
+  'Wrong data structure': 'Used an array when you needed a hashmap, or a stack when a queue was needed — wrong tool for the job.',
+  'Other':                'Miscellaneous mistake — syntax error, wrong output format, or something that doesn\'t fit the categories above.',
+};
+
 function AddMistakeModal({ onClose, onAdd }: { onClose: () => void; onAdd: (m: MistakeEntry) => void }) {
   const [title, setTitle] = useState('');
   const [type, setType] = useState<MistakeEntry['mistakeType']>('Wrong logic');
@@ -101,6 +110,7 @@ export default function MistakeJournal() {
         <button className={`mj-type-card ${typeFilter === 'All' ? 'active' : ''}`} onClick={() => setTypeFilter('All')}>
           <span className="mtc-count">{mistakes.filter((m) => !m.resolved).length}</span>
           <span className="mtc-label">All Open</span>
+          <span className="mtc-desc">All unresolved mistakes across every category</span>
         </button>
         {MISTAKE_TYPES.map((t) => (
           <button key={t} className={`mj-type-card ${typeFilter === t ? 'active' : ''}`}
@@ -108,6 +118,7 @@ export default function MistakeJournal() {
             style={typeFilter === t ? { borderColor: TYPE_COLOR[t], background: TYPE_COLOR[t] + '11' } : {}}>
             <span className="mtc-count" style={{ color: TYPE_COLOR[t] }}>{typeCounts[t]}</span>
             <span className="mtc-label">{t}</span>
+            <span className="mtc-desc">{TYPE_DESC[t]}</span>
           </button>
         ))}
       </div>

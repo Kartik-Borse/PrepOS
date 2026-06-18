@@ -52,6 +52,8 @@ function stripHtml(html: string): string {
     .replace(/<strong[^>]*>/gi, '**').replace(/<\/strong>/gi, '**')
     .replace(/<em>/gi, '_').replace(/<\/em>/gi, '_')
     .replace(/<code>(.*?)<\/code>/gi, '`$1`')
+    .replace(/<p>/gi, '').replace(/<\/p>/gi, '\n')
+    .replace(/<br\s*\/?>/gi, '\n')
     .replace(/<[^>]+>/g, '')
     .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&')
     .replace(/&nbsp;/g, ' ').replace(/&quot;/g, '"').replace(/&#39;/g, "'")

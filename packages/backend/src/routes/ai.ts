@@ -13,6 +13,18 @@ import { geminiChat, geminiGenerate } from '../services/geminiService.js';
 
 const router = express.Router();
 
+// Helper: returns user-friendly error response for quota/rate-limit issues
+function handleAIError(err: any, res: Response) {
+  const msg: string = err?.message ?? '';
+  if (msg.includes('429') || msg.includes('quota') || msg.includes('RESOURCE_EXHAUSTED')) {
+    return res.status(503).json({ error: { code: 'QUOTA_EXCEEDED', message: 'AI service is temporarily unavailable due to rate limits. Please try again in a minute.' } });
+  }
+  if (msg.includes('GEMINI_API_KEY')) {
+    return res.status(503).json({ error: { code: 'AI_NOT_CONFIGURED', message: 'AI features are not configured on this server.' } });
+  }
+  return res.status(500).json({ error: { code: 'AI_ERROR', message: msg || 'AI service error' } });
+}
+
 // ── Interview Chat ──────────────────────────────────────────────────────────
 // POST /api/ai/interview/chat
 // body: { mode: 'coding'|'behavioral'|'system', history: [{role, text}], message }
@@ -54,7 +66,7 @@ Use the STAR method (Situation, Task, Action, Result) framework.
     res.json({ reply });
   } catch (err: any) {
     console.error('Gemini interview error:', err);
-    res.status(500).json({ error: { message: err.message || 'AI service error' } });
+    return handleAIError(err, res);
   }
 });
 
@@ -116,7 +128,7 @@ Return ONLY valid JSON, no markdown code blocks.`;
     res.json({ plan, daysLeft });
   } catch (err: any) {
     console.error('Study plan error:', err);
-    res.status(500).json({ error: { message: err.message || 'Failed to generate study plan' } });
+    return handleAIError(err, res);
   }
 });
 
@@ -144,7 +156,7 @@ Be encouraging. Do not give the full solution.`;
     const hint = await geminiGenerate(prompt);
     res.json({ hint });
   } catch (err: any) {
-    res.status(500).json({ error: { message: err.message || 'Failed to generate hint' } });
+    return handleAIError(err, res);
   }
 });
 
@@ -175,7 +187,7 @@ Keep the total response under 300 words. Use markdown formatting.`;
     const review = await geminiGenerate(prompt);
     res.json({ review });
   } catch (err: any) {
-    res.status(500).json({ error: { message: err.message || 'Failed to generate review' } });
+    return handleAIError(err, res);
   }
 });
 
@@ -201,7 +213,7 @@ Keep it concise and practical. Use markdown formatting.`;
     const explanation = await geminiGenerate(prompt);
     res.json({ explanation });
   } catch (err: any) {
-    res.status(500).json({ error: { message: err.message || 'Failed to generate explanation' } });
+    return handleAIError(err, res);
   }
 });
 
@@ -240,7 +252,7 @@ Return ONLY valid JSON, no markdown code blocks, no extra text.`;
     res.json({ cheatsheet });
   } catch (err: any) {
     console.error('Cheatsheet gen error:', err);
-    res.status(500).json({ error: { message: err.message || 'Failed to generate cheatsheet' } });
+    return handleAIError(err, res);
   }
 });
 
