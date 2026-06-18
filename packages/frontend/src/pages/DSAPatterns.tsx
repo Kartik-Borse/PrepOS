@@ -129,6 +129,7 @@ function AddQuestionModal({
   const [tc1Input, setTc1Input] = useState('');
   const [tc1Expected, setTc1Expected] = useState('');
   const [fetchingLC, setFetchingLC] = useState(false);
+  const [metaData, setMetaData] = useState<any>(null);
 
   const fetchLCData = async () => {
     if (!lcLink.trim()) return;
@@ -141,6 +142,7 @@ function AddQuestionModal({
       }
       setDesc(problem.description || '');
       setCompanies((problem.companyTags || []).join(', '));
+      setMetaData(problem.metaData || null);
       if (problem.exampleTestcases) {
         const cases = problem.exampleTestcases.split('\n').filter(Boolean);
         if (cases.length > 0) setTc1Input(cases[0]);
@@ -165,6 +167,7 @@ function AddQuestionModal({
       companies: companies.split(',').map((c) => c.trim()).filter(Boolean),
       leetcodeLink: lcLink.trim() || undefined,
       addedAt: new Date().toISOString(),
+      metaData,
     });
     onClose();
   };

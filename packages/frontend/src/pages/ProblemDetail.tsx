@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 import { useAuthStore } from '../store/useAuthStore';
+import { BUILTIN_PROBLEMS } from './DSAPatterns';
 import DSAVisualizer from '../components/DSAVisualizer';
 import './ProblemDetail.css';
 
@@ -242,10 +243,10 @@ const APPROACHES = [
 export default function ProblemDetail() {
   const { id = 'longest-substring' } = useParams();
   const problem = useAppStore(s => {
-    const builtin = s.customProblems.find(p => p.id === id);
-    if (builtin) return builtin;
-    // fallback to built-in problems list (exported elsewhere)
-    return s.customProblems.find(p => p.id === id) || null;
+    const custom = s.customProblems.find(p => String(p.id) === String(id));
+    if (custom) return custom;
+    // fallback to built-in problems list
+    return BUILTIN_PROBLEMS.find(p => String(p.id) === String(id)) || null;
   }) || {
     // default placeholder if not found
     id: SAMPLE_PROBLEM.id,
