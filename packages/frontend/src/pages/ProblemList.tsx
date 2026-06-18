@@ -339,20 +339,38 @@ export default function ProblemList() {
           patterns={[{ id: patternId, name: patternName }]}
           onClose={() => setShowLCImport(false)}
           onImported={(p, importPatternId) => {
+            // Parse example test cases from the HTML description
+            const parsedTestCases: { input: string; expected: string }[] = [];
+            if (p.descriptionHtml) {
+              const preBlocks = [...p.descriptionHtml.matchAll(/<pre>([\s\S]*?)<\/pre>/gi)];
+              for (const block of preBlocks) {
+                const text = block[1].replace(/<[^>]+>/g, '').trim();
+                const inputMatch = text.match(/Input:\s*(.+?)(?:\n|$)/i);
+                const outputMatch = text.match(/Output:\s*(.+?)(?:\n|$)/i);
+                if (inputMatch && outputMatch) {
+                  parsedTestCases.push({ input: inputMatch[1].trim(), expected: outputMatch[1].trim() });
+                }
+              }
+            }
+            // Fall back to exampleTestcases lines if no parsed cases
+            const testCases = parsedTestCases.length > 0
+              ? parsedTestCases
+              : p.exampleTestcases
+                ? p.exampleTestcases.split('\n').filter(Boolean).map((line: string) => ({ input: line, expected: '' }))
+                : [];
             addProblem({
               id: `lc-${p.slug}`,
               title: p.title,
               difficulty: p.difficulty as Problem['difficulty'],
               patternId: importPatternId,
-              description: p.description,
+              description: p.descriptionHtml ?? p.description,
               examples: [],
               constraints: [],
-              testCases: p.exampleTestcases
-                ? p.exampleTestcases.split('\n').filter(Boolean).map((line: string) => ({ input: line, expected: '' }))
-                : [],
+              testCases,
               companies: p.companyTags ?? [],
               leetcodeLink: p.leetcodeUrl,
               tags: p.topicTags ?? [],
+              metaData: p.metaData,
               addedAt: new Date().toISOString(),
             });
           }}
