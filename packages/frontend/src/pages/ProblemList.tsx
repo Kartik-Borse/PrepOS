@@ -319,7 +319,28 @@ export default function ProblemList() {
 
       {/* LeetCode Import */}
       {showLCImport && (
-        <LeetcodeImport onClose={() => setShowLCImport(false)} />
+        <LeetcodeImport
+          patterns={[{ id: patternId, name: patternName }]}
+          onClose={() => setShowLCImport(false)}
+          onImported={(p, importPatternId) => {
+            addProblem({
+              id: `lc-${p.slug}`,
+              title: p.title,
+              difficulty: p.difficulty as Problem['difficulty'],
+              patternId: importPatternId,
+              description: p.description,
+              examples: [],
+              constraints: [],
+              testCases: p.exampleTestcases
+                ? p.exampleTestcases.split('\n').filter(Boolean).map((line: string) => ({ input: line, expected: '' }))
+                : [],
+              companies: p.companyTags ?? [],
+              leetcodeLink: p.leetcodeUrl,
+              tags: p.topicTags ?? [],
+              addedAt: new Date().toISOString(),
+            });
+          }}
+        />
       )}
     </>
   );
