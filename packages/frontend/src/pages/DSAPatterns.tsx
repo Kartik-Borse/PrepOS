@@ -1,14 +1,34 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronRight, Plus, Trash2, X, Search, CheckCircle2, RotateCcw, Circle, Link2 } from 'lucide-react';
+import {
+  DndContext,
+  DragEndEvent,
+  DragOverlay,
+  DragStartEvent,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  closestCenter,
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  arrayMove,
+  rectSortingStrategy,
+  useSortable,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import {
+  ChevronRight, Plus, Trash2, X, CheckCircle2, RotateCcw, Circle, Link2,
+  GripVertical, ListChecks, ExternalLink,
+} from 'lucide-react';
 import { useAppStore, Problem, CustomPattern } from '../store/useAppStore';
 import LeetcodeImport from '../components/LeetcodeImport';
 import './DSAPatterns.css';
 
-// ── Built-in patterns ────────────────────────────────────────────────────────
+// ── Built-in patterns ─────────────────────────────────────────────────────────
 const BUILTIN_PATTERNS = [
-  { id: 'sliding-window',     name: 'Sliding Window',                    count: 30, solved: 18, desc: 'Use a window that slides over data.', color: '#06b6d4' },
   { id: 'two-pointers',       name: 'Two Pointers',                      count: 28, solved: 22, desc: 'Two indices moving toward each other.', color: '#8b5cf6' },
+  { id: 'sliding-window',     name: 'Sliding Window',                    count: 30, solved: 18, desc: 'Use a window that slides over data.', color: '#06b6d4' },
   { id: 'fast-slow-pointers', name: 'Fast & Slow Pointers',              count: 18, solved: 12, desc: "Floyd's cycle detection.", color: '#ec4899' },
   { id: 'merge-intervals',    name: 'Merge Intervals',                   count: 22, solved: 8,  desc: 'Overlapping interval problems.', color: '#f59e0b' },
   { id: 'cyclic-sort',        name: 'Cyclic Sort',                       count: 15, solved: 5,  desc: 'Sort in O(n) by correct index placement.', color: '#10b981' },
@@ -30,7 +50,7 @@ const BUILTIN_PATTERNS = [
 ];
 
 // ── Built-in sample problems ──────────────────────────────────────────────────
-const BUILTIN_PROBLEMS: Problem[] = [
+export const BUILTIN_PROBLEMS: Problem[] = [
   { id: 'lc-3',   title: 'Longest Substring Without Repeating Characters', difficulty: 'Medium', patternId: 'sliding-window', description: '', examples: [], constraints: [], testCases: [{ input: '"abcabcbb"', expected: '3' }], companies: ['Amazon','Microsoft','Adobe'], leetcodeLink: 'https://leetcode.com/problems/longest-substring-without-repeating-characters/' },
   { id: 'lc-76',  title: 'Minimum Window Substring',                       difficulty: 'Hard',   patternId: 'sliding-window', description: '', examples: [], constraints: [], testCases: [], companies: ['Google','Facebook'], leetcodeLink: 'https://leetcode.com/problems/minimum-window-substring/' },
   { id: 'lc-567', title: 'Permutation in String',                          difficulty: 'Medium', patternId: 'sliding-window', description: '', examples: [], constraints: [], testCases: [], companies: ['Microsoft','Amazon'], leetcodeLink: 'https://leetcode.com/problems/permutation-in-string/' },
@@ -44,9 +64,6 @@ const BUILTIN_PROBLEMS: Problem[] = [
 ];
 
 const COLORS = ['#06b6d4','#8b5cf6','#ec4899','#f59e0b','#10b981','#3b82f6','#f97316','#a855f7','#22c55e','#ef4444'];
-
-type View = 'patterns' | 'all-problems';
-type DiffFilter = 'All' | 'Easy' | 'Medium' | 'Hard';
 
 const diffColor = (d: string) => d === 'Easy' ? 'var(--easy)' : d === 'Medium' ? 'var(--medium)' : 'var(--hard)';
 
@@ -124,6 +141,7 @@ function AddQuestionModal({
       testCases: tc1Input ? [{ input: tc1Input, expected: tc1Expected }] : [],
       companies: companies.split(',').map((c) => c.trim()).filter(Boolean),
       leetcodeLink: lcLink.trim() || undefined,
+      addedAt: new Date().toISOString(),
     });
     onClose();
   };
@@ -184,44 +202,240 @@ function AddQuestionModal({
   );
 }
 
+// ── Manage Questions Modal ────────────────────────────────────────────────────
+function ManageQuestionsModal({
+  patternId, patternName, allProblems, solvedProblems, onClose, onDelete, onNavigate,
+}: {
+  patternId: string;
+  patternName: string;
+  allProblems: Problem[];
+  solvedProblems: Record<string, { status: 'solved' | 'revision'; solvedAt: string }>;
+  onClose: () => void;
+  onDelete: (problem: Problem) => void;
+  onNavigate: (id: string) => void;
+}) {
+  const patternProblems = allProblems.filter((p) => p.patternId === patternId);
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-box modal-lg" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-header">
+          <h3>
+            <ListChecks size={16} style={{ display: 'inline', marginRight: 8 }} />
+            Questions in <span style={{ color: 'var(--primary)' }}>{patternName}</span>
+          </h3>
+          <button onClick={onClose}><X size={16} /></button>
+        </div>
+        <div className="modal-body" style={{ padding: 0, maxHeight: '60vh', overflowY: 'auto' }}>
+          {patternProblems.length === 0 && (
+            <div className="mq-empty">No questions yet. Add some with the + button on the card.</div>
+          )}
+          {patternProblems.map((p) => {
+            const status = solvedProblems[p.id]?.status;
+            return (
+              <div key={p.id} className="mq-row">
+                <span className="mq-status">
+                  {status === 'solved'
+                    ? <CheckCircle2 size={14} style={{ color: 'var(--success)' }} />
+                    : status === 'revision'
+                    ? <RotateCcw size={14} style={{ color: 'var(--warning)' }} />
+                    : <Circle size={14} style={{ color: 'var(--text-faint)' }} />}
+                </span>
+                <span className="mq-title" onClick={() => { onNavigate(p.id); onClose(); }}>
+                  {p.title}
+                </span>
+                <span className="mq-diff" style={{ color: diffColor(p.difficulty) }}>{p.difficulty}</span>
+                <div className="mq-actions">
+                  {p.leetcodeLink && (
+                    <a href={p.leetcodeLink} target="_blank" rel="noreferrer" className="mq-lc-btn" onClick={(e) => e.stopPropagation()}>
+                      <ExternalLink size={12} />
+                    </a>
+                  )}
+                  <button
+                    className="mq-del-btn"
+                    title="Remove from pattern"
+                    onClick={() => onDelete(p)}
+                  >
+                    <Trash2 size={13} />
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        <div className="modal-footer">
+          <button className="btn-cancel" onClick={onClose}>Close</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Sortable Pattern Card ─────────────────────────────────────────────────────
+interface PatternCardProps {
+  pattern: {
+    id: string; name: string; color: string; desc?: string;
+    description?: string; isCustom: boolean;
+  };
+  total: number;
+  solved: number;
+  onAddQuestion: () => void;
+  onManageQuestions: () => void;
+  onDelete?: () => void;
+  onView: () => void;
+  isDragging?: boolean;
+}
+
+function SortablePatternCard({ pattern, total, solved, onAddQuestion, onManageQuestions, onDelete, onView, isDragging }: PatternCardProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging: isSortableDragging,
+  } = useSortable({ id: pattern.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isSortableDragging ? 0.35 : 1,
+  };
+
+  const pct = total > 0 ? Math.round((solved / total) * 100) : 0;
+  const desc = (pattern as { desc?: string; description?: string }).desc
+    ?? (pattern as { desc?: string; description?: string }).description
+    ?? '';
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`pattern-card ${isDragging ? 'pc-ghost' : ''}`}
+    >
+      <div className="pc-top">
+        {/* Drag handle */}
+        <button
+          className="drag-handle"
+          {...attributes}
+          {...listeners}
+          title="Drag to reorder"
+          tabIndex={0}
+        >
+          <GripVertical size={14} />
+        </button>
+        <div className="pc-dot" style={{ background: pattern.color }} />
+        <div className="pc-meta">
+          <span className="pc-name">{pattern.name}</span>
+          <span className="pc-count">
+            {total} problems {pattern.isCustom && <span className="custom-badge">Custom</span>}
+          </span>
+        </div>
+        <div className="pc-actions">
+          <button className="pc-action-btn add" onClick={onAddQuestion} title="Add question">
+            <Plus size={13} />
+          </button>
+          <button className="pc-action-btn manage" onClick={onManageQuestions} title="Manage questions">
+            <ListChecks size={13} />
+          </button>
+          <button className="pc-action-btn view" onClick={onView} title="View problems">
+            <ChevronRight size={13} />
+          </button>
+          {pattern.isCustom && onDelete && (
+            <button className="pc-action-btn del" onClick={onDelete} title="Delete pattern">
+              <Trash2 size={13} />
+            </button>
+          )}
+        </div>
+      </div>
+      <p className="pc-desc">{desc}</p>
+      <div className="pc-footer">
+        <div className="pc-bar-wrap">
+          <div className="pc-bar" style={{ width: `${pct}%`, background: pattern.color }} />
+        </div>
+        <span className="pc-pct">{pct}%</span>
+      </div>
+      <div className="pc-solved-line">{solved}/{total} solved</div>
+    </div>
+  );
+}
+
 // ── Main Page ─────────────────────────────────────────────────────────────────
 export default function DSAPatterns() {
-  const { customPatterns, addPattern, deletePattern, customProblems, addProblem, solvedProblems } = useAppStore();
+  const {
+    customPatterns, addPattern, deletePattern,
+    customProblems, addProblem, deleteProblem,
+    hiddenProblems, hideBuiltinProblem,
+    solvedProblems,
+    patternOrder, reorderPatterns,
+  } = useAppStore();
   const navigate = useNavigate();
 
-  const [view, setView] = useState<View>('patterns');
   const [showAddPattern, setShowAddPattern] = useState(false);
   const [showLCImport, setShowLCImport] = useState(false);
   const [addQuestionFor, setAddQuestionFor] = useState<{ id: string; name: string } | null>(null);
-  const [search, setSearch] = useState('');
-  const [diffFilter, setDiffFilter] = useState<DiffFilter>('All');
-  const [patternFilter, setPatternFilter] = useState('all');
+  const [manageQuestionsFor, setManageQuestionsFor] = useState<{ id: string; name: string } | null>(null);
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<{ problem: Problem } | null>(null);
 
-  const allPatterns = [
-    ...BUILTIN_PATTERNS.map((p) => ({ ...p, isCustom: false })),
-    ...customPatterns.map((p) => ({ ...p, count: 0, solved: 0, isCustom: true })),
+  // Merge and sort patterns — first apply user-defined order
+  const builtinPatterns = BUILTIN_PATTERNS.map((p) => ({ ...p, isCustom: false }));
+  const customPatternsEnriched = customPatterns.map((p) => ({ ...p, count: 0, solved: 0, isCustom: true, desc: p.description }));
+  const allPatternsUnordered = [...builtinPatterns, ...customPatternsEnriched];
+
+  const allPatterns = patternOrder.length > 0
+    ? [
+        ...patternOrder
+          .map((id) => allPatternsUnordered.find((p) => p.id === id))
+          .filter(Boolean) as typeof allPatternsUnordered,
+        ...allPatternsUnordered.filter((p) => !patternOrder.includes(p.id)),
+      ]
+    : allPatternsUnordered;
+
+  // All visible problems (built-in minus hidden + custom)
+  const allProblems = [
+    ...BUILTIN_PROBLEMS.filter((p) => !hiddenProblems.includes(p.id)),
+    ...customProblems,
   ];
 
-  const allProblems = [...BUILTIN_PROBLEMS, ...customProblems];
-
-  // Enrich builtin pattern counts with custom problems
+  // Count problems per pattern
   const patternCounts = allProblems.reduce<Record<string, number>>((acc, p) => {
     acc[p.patternId] = (acc[p.patternId] ?? 0) + 1;
     return acc;
   }, {});
 
-  const filteredProblems = allProblems.filter((p) => {
-    const matchSearch = p.title.toLowerCase().includes(search.toLowerCase());
-    const matchDiff = diffFilter === 'All' || p.difficulty === diffFilter;
-    const matchPattern = patternFilter === 'all' || p.patternId === patternFilter;
-    return matchSearch && matchDiff && matchPattern;
-  });
+  // ── DnD sensors ──
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } })
+  );
 
-  const getPatternName = (id: string) =>
-    allPatterns.find((p) => p.id === id)?.name ?? id;
+  const handleDragStart = (event: DragStartEvent) => {
+    setActiveId(event.active.id as string);
+  };
 
-  const getPatternColor = (id: string) =>
-    allPatterns.find((p) => p.id === id)?.color ?? '#888';
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    setActiveId(null);
+    if (!over || active.id === over.id) return;
+
+    const ids = allPatterns.map((p) => p.id);
+    const oldIndex = ids.indexOf(active.id as string);
+    const newIndex = ids.indexOf(over.id as string);
+    reorderPatterns(arrayMove(ids, oldIndex, newIndex));
+  };
+
+  // ── Delete a problem (custom = delete, builtin = hide) ──
+  const handleDeleteProblem = (problem: Problem) => {
+    const isBuiltin = BUILTIN_PROBLEMS.some((b) => b.id === problem.id);
+    if (isBuiltin) {
+      hideBuiltinProblem(problem.id);
+    } else {
+      deleteProblem(problem.id);
+    }
+    setConfirmDelete(null);
+  };
+
+  const activePattern = activeId ? allPatterns.find((p) => p.id === activeId) : null;
 
   return (
     <div className="dsa-patterns">
@@ -232,190 +446,72 @@ export default function DSAPatterns() {
           <p className="sub">{allPatterns.length} patterns · {allProblems.length} problems</p>
         </div>
         <div className="dsp-header-actions">
-          <div className="view-toggle">
-            <button className={`vt-btn ${view === 'patterns' ? 'active' : ''}`} onClick={() => setView('patterns')}>Patterns</button>
-            <button className={`vt-btn ${view === 'all-problems' ? 'active' : ''}`} onClick={() => setView('all-problems')}>All Problems</button>
-          </div>
           <button className="btn-lc-import" onClick={() => setShowLCImport(true)}>
             <Link2 size={14} /> Import from LC
           </button>
-          {view === 'patterns' && (
-            <button className="btn-add" onClick={() => setShowAddPattern(true)}>
-              <Plus size={14} /> New Pattern
-            </button>
-          )}
+          <button className="btn-add" onClick={() => setShowAddPattern(true)}>
+            <Plus size={14} /> New Pattern
+          </button>
         </div>
       </div>
 
-      {/* ── PATTERNS VIEW ── */}
-      {view === 'patterns' && (
-        <div className="patterns-grid">
-          {allPatterns.map((p) => {
-            const total = patternCounts[p.id] ?? p.count;
-            const solved = Object.keys(solvedProblems).filter((pid) =>
-              allProblems.find((prob) => prob.id === pid && prob.patternId === p.id)
-            ).length;
-            const pct = total > 0 ? Math.round((solved / total) * 100) : 0;
+      {/* ── PATTERNS GRID with DnD ── */}
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+      >
+        <SortableContext items={allPatterns.map((p) => p.id)} strategy={rectSortingStrategy}>
+          <div className="patterns-grid">
+            {allPatterns.map((p) => {
+              const total = patternCounts[p.id] ?? p.count;
+              const solved = Object.keys(solvedProblems).filter((pid) =>
+                allProblems.find((prob) => prob.id === pid && prob.patternId === p.id)
+              ).length;
 
-            return (
-              <div key={p.id} className="pattern-card">
-                <div className="pc-top">
-                  <div className="pc-dot" style={{ background: p.color }} />
-                  <div className="pc-meta">
-                    <span className="pc-name">{p.name}</span>
-                    <span className="pc-count">{total} problems {p.isCustom && <span className="custom-badge">Custom</span>}</span>
-                  </div>
-                  <div className="pc-actions">
-                    <button
-                      className="pc-action-btn add"
-                      onClick={() => setAddQuestionFor({ id: p.id, name: p.name })}
-                      title="Add question"
-                    >
-                      <Plus size={13} />
-                    </button>
-                    <button
-                      className="pc-action-btn view"
-                      onClick={() => navigate(`/dsa/${p.id}`)}
-                      title="View problems"
-                    >
-                      <ChevronRight size={13} />
-                    </button>
-                    {p.isCustom && (
-                      <button
-                        className="pc-action-btn del"
-                        onClick={() => deletePattern(p.id)}
-                        title="Delete pattern"
-                      >
-                        <Trash2 size={13} />
-                      </button>
-                    )}
-                  </div>
-                </div>
-                <p className="pc-desc">{('desc' in p ? p.desc : (p as CustomPattern).description) ?? ''}</p>
-                <div className="pc-footer">
-                  <div className="pc-bar-wrap">
-                    <div className="pc-bar" style={{ width: `${pct}%`, background: p.color }} />
-                  </div>
-                  <span className="pc-pct">{pct}%</span>
-                </div>
-                <div className="pc-solved-line">{solved}/{total} solved</div>
-              </div>
-            );
-          })}
-
-          {/* Create pattern card */}
-          <button className="pattern-card create-card" onClick={() => setShowAddPattern(true)}>
-            <Plus size={28} style={{ color: 'var(--text-faint)' }} />
-            <span>Create Pattern</span>
-          </button>
-        </div>
-      )}
-
-      {/* ── ALL PROBLEMS VIEW ── */}
-      {view === 'all-problems' && (
-        <div className="all-problems">
-          {/* Filters */}
-          <div className="ap-filters">
-            <div className="ap-search-wrap">
-              <Search size={13} className="ap-search-icon" />
-              <input
-                className="ap-search"
-                placeholder="Search problems…"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                aria-label="Search problems"
-              />
-            </div>
-            <div className="filter-group">
-              {(['All', 'Easy', 'Medium', 'Hard'] as DiffFilter[]).map((d) => (
-                <button key={d} className={`filter-btn ${diffFilter === d ? 'active' : ''}`} onClick={() => setDiffFilter(d)}>{d}</button>
-              ))}
-            </div>
-            <select
-              className="pattern-select"
-              value={patternFilter}
-              onChange={(e) => setPatternFilter(e.target.value)}
-              aria-label="Filter by pattern"
-            >
-              <option value="all">All Patterns</option>
-              {allPatterns.map((p) => (
-                <option key={p.id} value={p.id}>{p.name}</option>
-              ))}
-            </select>
-            <button
-              className="btn-add"
-              onClick={() => setAddQuestionFor({ id: patternFilter === 'all' ? allPatterns[0].id : patternFilter, name: getPatternName(patternFilter === 'all' ? allPatterns[0].id : patternFilter) })}
-            >
-              <Plus size={14} /> Add Question
-            </button>
-          </div>
-
-          {/* Stats row */}
-          <div className="ap-stats">
-            <span className="ap-stat-chip">{filteredProblems.length} shown</span>
-            <span className="ap-stat-chip easy-chip">{filteredProblems.filter(p => p.difficulty === 'Easy').length} Easy</span>
-            <span className="ap-stat-chip medium-chip">{filteredProblems.filter(p => p.difficulty === 'Medium').length} Medium</span>
-            <span className="ap-stat-chip hard-chip">{filteredProblems.filter(p => p.difficulty === 'Hard').length} Hard</span>
-          </div>
-
-          {/* Table */}
-          <div className="problems-table">
-            <div className="pt-head">
-              <span className="col-st">Status</span>
-              <span className="col-ti">Title</span>
-              <span className="col-pa">Pattern</span>
-              <span className="col-di">Difficulty</span>
-              <span className="col-co">Companies</span>
-              <span className="col-lc">LC</span>
-            </div>
-
-            {filteredProblems.length === 0 && (
-              <div className="pt-empty">No problems found. Add some questions to your patterns!</div>
-            )}
-
-            {filteredProblems.map((p) => {
-              const status = solvedProblems[p.id]?.status;
               return (
-                <div
+                <SortablePatternCard
                   key={p.id}
-                  className="pt-row"
-                  onClick={() => navigate(`/problem/${p.id}`)}
-                  role="button"
-                  tabIndex={0}
-                  onKeyDown={(e) => e.key === 'Enter' && navigate(`/problem/${p.id}`)}
-                >
-                  <span className="col-st">
-                    {status === 'solved' ? <CheckCircle2 size={15} style={{ color: 'var(--success)' }} /> :
-                     status === 'revision' ? <RotateCcw size={15} style={{ color: 'var(--warning)' }} /> :
-                     <Circle size={15} style={{ color: 'var(--text-faint)' }} />}
-                  </span>
-                  <span className="col-ti">{p.title}</span>
-                  <span className="col-pa">
-                    <span className="pattern-pill" style={{ background: getPatternColor(p.patternId) + '22', color: getPatternColor(p.patternId) }}>
-                      {getPatternName(p.patternId)}
-                    </span>
-                  </span>
-                  <span className="col-di" style={{ color: diffColor(p.difficulty) }}>{p.difficulty}</span>
-                  <span className="col-co">
-                    {p.companies.slice(0, 2).map((c) => <span key={c} className="co-chip">{c}</span>)}
-                    {p.companies.length > 2 && <span className="co-chip">+{p.companies.length - 2}</span>}
-                  </span>
-                  <span className="col-lc">
-                    {p.leetcodeLink && (
-                      <a href={p.leetcodeLink} target="_blank" rel="noreferrer" className="lc-badge" onClick={(e) => e.stopPropagation()}>LC</a>
-                    )}
-                  </span>
-                </div>
+                  pattern={p}
+                  total={total}
+                  solved={solved}
+                  onAddQuestion={() => setAddQuestionFor({ id: p.id, name: p.name })}
+                  onManageQuestions={() => setManageQuestionsFor({ id: p.id, name: p.name })}
+                  onDelete={p.isCustom ? () => deletePattern(p.id as string) : undefined}
+                  onView={() => navigate(`/dsa/${p.id}`)}
+                />
               );
             })}
-          </div>
-        </div>
-      )}
 
-      {/* Modals */}
+            {/* Create pattern card */}
+            <button className="pattern-card create-card" onClick={() => setShowAddPattern(true)}>
+              <Plus size={28} style={{ color: 'var(--text-faint)' }} />
+              <span>Create Pattern</span>
+            </button>
+          </div>
+        </SortableContext>
+
+        {/* Drag overlay — ghost card while dragging */}
+        <DragOverlay>
+          {activePattern && (
+            <div className="pattern-card pc-overlay">
+              <div className="pc-top">
+                <div className="pc-dot" style={{ background: activePattern.color }} />
+                <div className="pc-meta">
+                  <span className="pc-name">{activePattern.name}</span>
+                </div>
+              </div>
+            </div>
+          )}
+        </DragOverlay>
+      </DndContext>
+
+      {/* ── Modals ── */}
       {showAddPattern && (
         <AddPatternModal onClose={() => setShowAddPattern(false)} onAdd={addPattern} />
       )}
+
       {addQuestionFor && (
         <AddQuestionModal
           patternId={addQuestionFor.id}
@@ -424,11 +520,52 @@ export default function DSAPatterns() {
           onAdd={addProblem}
         />
       )}
+
+      {manageQuestionsFor && (
+        <ManageQuestionsModal
+          patternId={manageQuestionsFor.id}
+          patternName={manageQuestionsFor.name}
+          allProblems={allProblems}
+          solvedProblems={solvedProblems}
+          onClose={() => setManageQuestionsFor(null)}
+          onDelete={(problem) => setConfirmDelete({ problem })}
+          onNavigate={(id) => navigate(`/problem/${id}`)}
+        />
+      )}
+
+      {/* Confirm delete dialog */}
+      {confirmDelete && (
+        <div className="modal-overlay" onClick={() => setConfirmDelete(null)}>
+          <div className="modal-box confirm-box" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Remove Question</h3>
+              <button onClick={() => setConfirmDelete(null)}><X size={16} /></button>
+            </div>
+            <div className="modal-body" style={{ paddingTop: 16, paddingBottom: 16 }}>
+              <p style={{ fontSize: 14, color: 'var(--text-dim)', lineHeight: 1.6 }}>
+                Remove <strong style={{ color: 'var(--text)' }}>{confirmDelete.problem.title}</strong> from this pattern?
+              </p>
+            </div>
+            <div className="modal-footer">
+              <button className="btn-cancel" onClick={() => setConfirmDelete(null)}>Cancel</button>
+              <button
+                className="btn-danger"
+                onClick={() => {
+                  handleDeleteProblem(confirmDelete.problem);
+                  // If manage modal is still open, it will auto-update
+                }}
+              >
+                <Trash2 size={13} /> Remove
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showLCImport && (
         <LeetcodeImport
           onClose={() => setShowLCImport(false)}
           onImported={(p) => {
-            // Add to local store so it shows up immediately in the problem list
             addProblem({
               id: `lc-${p.slug}`,
               title: p.title,
@@ -443,6 +580,7 @@ export default function DSAPatterns() {
               companies: p.companyTags ?? [],
               leetcodeLink: p.leetcodeUrl,
               tags: p.topicTags ?? [],
+              addedAt: new Date().toISOString(),
             });
           }}
         />

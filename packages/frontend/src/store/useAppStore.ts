@@ -17,6 +17,7 @@ export interface Problem {
   images?: string[];
   tags?: string[];
   selfRating?: 1 | 2 | 3 | 4 | 5;
+  addedAt?: string;
 }
 
 export interface Attempt {
@@ -173,6 +174,11 @@ interface AppState {
   updateProblem: (id: string, updates: Partial<Problem>) => void;
   deleteProblem: (id: string) => void;
 
+  // Hidden built-in problems (user "deleted" them from a pattern)
+  hiddenProblems: string[];
+  hideBuiltinProblem: (id: string) => void;
+  unhideBuiltinProblem: (id: string) => void;
+
   attempts: Attempt[];
   addAttempt: (a: Attempt) => void;
 
@@ -219,6 +225,10 @@ interface AppState {
   addPattern: (p: CustomPattern) => void;
   deletePattern: (id: string) => void;
 
+  // Pattern ordering (array of pattern IDs in user-defined order)
+  patternOrder: string[];
+  reorderPatterns: (newOrder: string[]) => void;
+
   solvedProblems: Record<string, { status: 'solved' | 'revision'; solvedAt: string }>;
   markSolved: (problemId: string, status: 'solved' | 'revision') => void;
 }
@@ -233,9 +243,13 @@ export const useAppStore = create<AppState>()(
   persist(
     (set) => ({
       customProblems: [],
-      addProblem: (p) => set((s) => ({ customProblems: [...s.customProblems, p] })),
+      addProblem: (p) => set((s) => ({ customProblems: [...s.customProblems, { ...p, addedAt: p.addedAt ?? new Date().toISOString() }] })),
       updateProblem: (id, u) => set((s) => ({ customProblems: s.customProblems.map((p) => p.id === id ? { ...p, ...u } : p) })),
       deleteProblem: (id) => set((s) => ({ customProblems: s.customProblems.filter((p) => p.id !== id) })),
+
+      hiddenProblems: [],
+      hideBuiltinProblem: (id) => set((s) => ({ hiddenProblems: [...s.hiddenProblems, id] })),
+      unhideBuiltinProblem: (id) => set((s) => ({ hiddenProblems: s.hiddenProblems.filter((h) => h !== id) })),
 
       attempts: [],
       addAttempt: (a) => set((s) => ({ attempts: [a, ...s.attempts] })),
@@ -302,7 +316,11 @@ export const useAppStore = create<AppState>()(
         set((s) => ({
           customPatterns: s.customPatterns.filter((p) => p.id !== id),
           customProblems: s.customProblems.filter((p) => p.patternId !== id),
+          patternOrder: s.patternOrder.filter((oid) => oid !== id),
         })),
+
+      patternOrder: [],
+      reorderPatterns: (newOrder) => set(() => ({ patternOrder: newOrder })),
 
       solvedProblems: {},
       markSolved: (problemId, status) =>
