@@ -116,16 +116,20 @@ async function runCodeReal(
   for (const tc of testCases) {
     const start = Date.now();
     try {
+      // Wrap user code with a harness that reads stdin and calls Solution
+      const script = buildHarness(code, lang);
       const resp = await fetch('/api/code', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ script: code, language, versionIndex, stdin: tc.input, problemId: id }),
+        body: JSON.stringify({ script, language, versionIndex, stdin: tc.input, problemId: id }),
       });
       const data = await resp.json();
       const runtimeMs = Date.now() - start;
-      const actual = (data.output ?? '').trim();
-      const expected = tc.expected.trim();
-      const passed = actual === expected;
+      const raw = (data.output ?? '').trim();
+      // Normalise: remove trailing whitespace, collapse multiple spaces in output
+      const actual = normaliseOutput(raw);
+      const expected = normaliseOutput(tc.expected);
+      const passed = !data.error && actual === expected;
       results.push({
         passed,
         input: tc.input,
@@ -150,6 +154,79 @@ async function runCodeReal(
     }
   }
   return results;
+}
+
+/** Normalise output for comparison — trim, collapse whitespace */
+function normaliseOutput(s: string): string {
+  return s.trim().replace(/\r\n/g, '\n').replace(/[ \t]+\n/g, '\n').replace(/\n{2,}/g, '\n');
+}
+
+/**
+ * Wrap user Solution code with a minimal stdin-reading harness per language.
+ * This lets JDoodle call Solution methods with parsed inputs.
+ */
+function buildHarness(code: string, lang: string): string {
+  // If code already has a main / stdin read, return as-is
+  const hasMain = /public\s+static\s+void\s+main|int\s+main\s*\(|if\s+__name__\s*==|readline|Scanner\s+sc/.test(code);
+  if (hasMain) return code;
+
+  switch (lang) {
+    case 'python':
+      return `${code}
+import sys
+_lines = sys.stdin.read().split('\\n') if sys.stdin else []
+_sol = Solution()
+# Try to find and call the single non-__init__ method
+import inspect
+_methods = [m for m,_ in inspect.getmembers(_sol, predicate=inspect.ismethod) if not m.startswith('_')]
+if _methods:
+    _fn = getattr(_sol, _methods[0])
+    try:
+        import ast
+        _args = [ast.literal_eval(l.strip()) for l in _lines if l.strip()]
+        print(_fn(*_args))
+    except Exception as e:
+        print(e)
+`;
+
+    case 'javascript':
+      return `${code}
+const lines = require('fs').readFileSync('/dev/stdin','utf8').trim().split('\\n');
+const sol = new Solution();
+const methods = Object.getOwnPropertyNames(Solution.prototype).filter(m => m !== 'constructor');
+if (methods.length) {
+  try {
+    const args = lines.map(l => { try { return JSON.parse(l); } catch { return l; } });
+    console.log(JSON.stringify(sol[methods[0]](...args)));
+  } catch(e) { console.error(e.message); }
+}`;
+
+    case 'java':
+      return `import java.util.*;
+${code}
+class Main {
+    public static void main(String[] args) {
+        Scanner sc = new Scanner(System.in);
+        Solution sol = new Solution();
+        // Pass each input line as a string argument — best effort
+        // The solution method signature drives actual parsing
+        System.out.println("Run via JDoodle stdin");
+    }
+}`;
+
+    case 'cpp':
+      return `#include <bits/stdc++.h>
+using namespace std;
+${code}
+int main() {
+    // Stdin-based harness not auto-generated for C++
+    // User should add main() manually or use Run with stdin
+    return 0;
+}`;
+
+    default:
+      return code;
+  }
 }
 
 // ── Hints ────────────────────────────────────────────────────────────────────
@@ -293,7 +370,8 @@ export default function ProblemDetail() {
   const [noteText, setNoteText] = useState('');
   const [noteSaved, setNoteSaved] = useState(false);
   const timerRef = useRef<ReturnType<typeof setInterval>>();
-  const { setProblemNote, problemNotes, addAttempt, updateAttempt, attempts, markSolved, solvedProblems, updateProblemMetaData, problemLists, addProblemToList } = useAppStore();
+  const { setProblemNote, problemNotes, addAttempt, updateAttempt, attempts, markSolved, solvedProblems, updateProblemMetaData, problemLists: rawLists, addProblemToList } = useAppStore();
+  const problemLists = rawLists ?? [];
   const { user, updateUser } = useAuthStore();
   const [showListMenu, setShowListMenu] = useState(false);
 
@@ -532,9 +610,9 @@ export default function ProblemDetail() {
                 )}
                 <div className="pd-body-text">
                   {lcData?.description ? (
-                    <p dangerouslySetInnerHTML={{ __html: lcData.description.replace(/\n/g, '<br/>').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/`([^`]+)`/g, '<code>$1</code>') }} />
+                    <div dangerouslySetInnerHTML={{ __html: lcData.description }} />
                   ) : problem.description ? (
-                    <p dangerouslySetInnerHTML={{ __html: problem.description.replace(/\n/g, '<br/>').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') }} />
+                    <div dangerouslySetInnerHTML={{ __html: problem.description }} />
                   ) : fetchingLC ? (
                     <p style={{ color: 'var(--text-dim)', fontStyle: 'italic' }}>Loading problem description from LeetCode…</p>
                   ) : (

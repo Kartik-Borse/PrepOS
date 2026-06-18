@@ -52,7 +52,8 @@ function NewListModal({ onClose, onAdd }: { onClose: () => void; onAdd: (l: Prob
 }
 
 export default function Lists() {
-  const { problemLists, addList, deleteList, renameList, removeProblemFromList } = useAppStore();
+  const { problemLists: rawLists, addList, deleteList, renameList, removeProblemFromList } = useAppStore();
+  const problemLists = rawLists ?? [];
   const [showNew, setShowNew] = useState(false);
   const [activeId, setActiveId] = useState<string | null>(problemLists[0]?.id ?? null);
   const [editingId, setEditingId] = useState<string | null>(null);
