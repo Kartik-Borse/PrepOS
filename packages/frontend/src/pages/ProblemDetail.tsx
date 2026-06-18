@@ -473,9 +473,9 @@ export default function ProblemDetail() {
                 )}
                 <div className="pd-body-text">
                   {lcData?.description ? (
-                    <p dangerouslySetInnerHTML={{ __html: lcData.description.replace(/\n/g, '<br/>').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/`([^`]+)`/g, '<code>$1</code>') }} />
+                    <div dangerouslySetInnerHTML={{ __html: lcData.description }} />
                   ) : problem.description ? (
-                    <p dangerouslySetInnerHTML={{ __html: problem.description.replace(/\n/g, '<br/>').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') }} />
+                    <div dangerouslySetInnerHTML={{ __html: problem.description }} />
                   ) : fetchingLC ? (
                     <p style={{ color: 'var(--text-dim)', fontStyle: 'italic' }}>Loading problem description from LeetCode…</p>
                   ) : (
