@@ -636,7 +636,7 @@ export default function ProblemDetail() {
           {/* Code editor */}
           <div className="code-editor-wrap">
             <div className="line-numbers" aria-hidden="true">
-              {code.split('\n').map((_, i) => <span key={i}>{i + 1}</span>)}
+              {code.split('\n').map((_: any, i: number) => <span key={i}>{i + 1}</span>)}
             </div>
             <textarea
               className="code-textarea"
