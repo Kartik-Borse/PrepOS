@@ -13,15 +13,90 @@ import './ProblemDetail.css';
 // ── Starter templates ────────────────────────────────────────────────────────
 const STARTER: Record<string, Record<string, string>> = {
   'longest-substring': {
-    python: `class Solution:\n    def lengthOfLongestSubstring(self, s: str) -> int:\n        # Your solution here\n        pass`,
-    javascript: `var lengthOfLongestSubstring = function(s) {\n    // Your solution here\n};\n`,
-    cpp: `class Solution {\npublic:\n    int lengthOfLongestSubstring(string s) {\n        // Your solution here\n    }\n};\n`,
-    java: `class Solution {\n    public int lengthOfLongestSubstring(String s) {\n        // Your solution here\n    }\n}\n`,
+    python:
+`def lengthOfLongestSubstring(s: str) -> int:
+    # Your solution here — must return an int
+    seen = {}
+    left = max_len = 0
+    for right, ch in enumerate(s):
+        if ch in seen and seen[ch] >= left:
+            left = seen[ch] + 1
+        seen[ch] = right
+        max_len = max(max_len, right - left + 1)
+    return max_len
+
+s = input().strip()
+print(lengthOfLongestSubstring(s))
+`,
+    javascript:
+`function lengthOfLongestSubstring(s) {
+    // Your solution here — must return a number
+    const seen = new Map();
+    let left = 0, maxLen = 0;
+    for (let right = 0; right < s.length; right++) {
+        if (seen.has(s[right]) && seen.get(s[right]) >= left) {
+            left = seen.get(s[right]) + 1;
+        }
+        seen.set(s[right], right);
+        maxLen = Math.max(maxLen, right - left + 1);
+    }
+    return maxLen;
+}
+
+const s = require('fs').readFileSync('/dev/stdin','utf8').trim();
+console.log(lengthOfLongestSubstring(s));
+`,
+    java:
+`import java.util.*;
+public class Main {
+    static int lengthOfLongestSubstring(String s) {
+        // Your solution here — must return an int
+        Map<Character,Integer> seen = new HashMap<>();
+        int left = 0, maxLen = 0;
+        for (int r = 0; r < s.length(); r++) {
+            char c = s.charAt(r);
+            if (seen.containsKey(c) && seen.get(c) >= left) left = seen.get(c) + 1;
+            seen.put(c, r);
+            maxLen = Math.max(maxLen, r - left + 1);
+        }
+        return maxLen;
+    }
+    public static void main(String[] args) {
+        Scanner sc = new Scanner(System.in);
+        String s = sc.nextLine().trim();
+        System.out.println(lengthOfLongestSubstring(s));
+    }
+}
+`,
+    cpp:
+`#include<bits/stdc++.h>
+using namespace std;
+int lengthOfLongestSubstring(string s) {
+    // Your solution here — must return an int
+    unordered_map<char,int> seen;
+    int left = 0, maxLen = 0;
+    for (int r = 0; r < (int)s.size(); r++) {
+        if (seen.count(s[r]) && seen[s[r]] >= left) left = seen[s[r]] + 1;
+        seen[s[r]] = r;
+        maxLen = max(maxLen, r - left + 1);
+    }
+    return maxLen;
+}
+int main(){
+    string s; getline(cin, s);
+    cout << lengthOfLongestSubstring(s) << endl;
+}
+`,
   },
 };
 
 const DEFAULT_STARTER = (lang: string) =>
-  ({ python: `# Write your solution here\ndef solution():\n    pass`, javascript: `// Write your solution here\nfunction solution() {\n\n}`, cpp: `// Write your solution here\n#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n    return 0;\n}`, java: `// Write your solution here\nclass Solution {\n    public static void main(String[] args) {\n    }\n}` }[lang] ?? '');
+  ({
+    python: `def solve():\n    # Read input, print output\n    line = input().strip()\n    # your logic here\n    print(line)\n\nsolve()`,
+    javascript: `const lines = require('fs').readFileSync('/dev/stdin','utf8').trim().split('\\n');\n// your logic here\nconsole.log(lines[0]);`,
+    cpp: `#include<bits/stdc++.h>\nusing namespace std;\nint main(){\n    string line;\n    getline(cin, line);\n    // your logic here\n    cout << line << endl;\n}`,
+    java: `import java.util.*;\npublic class Main{\n    public static void main(String[] args){\n        Scanner sc=new Scanner(System.in);\n        String line=sc.nextLine();\n        // your logic here\n        System.out.println(line);\n    }\n}`,
+  }[lang] ?? '');
 
 // ── Real JDoodle execution engine ────────────────────────────────────────────
 interface TestResult {
@@ -113,11 +188,11 @@ const SAMPLE_PROBLEM = {
   ],
   constraints: ['0 ≤ s.length ≤ 5 × 10⁴', 's consists of English letters, digits, symbols and spaces.'],
   testCases: [
-    { input: '"abcabcbb"', expected: '3' },
-    { input: '"bbbbb"', expected: '1' },
-    { input: '"pwwkew"', expected: '3' },
-    { input: '""', expected: '0' },
-    { input: '" "', expected: '1' },
+    { input: 'abcabcbb', expected: '3' },
+    { input: 'bbbbb',    expected: '1' },
+    { input: 'pwwkew',   expected: '3' },
+    { input: '',         expected: '0' },
+    { input: ' ',        expected: '1' },
   ],
   leetcodeLink: 'https://leetcode.com/problems/longest-substring-without-repeating-characters/',
 };
