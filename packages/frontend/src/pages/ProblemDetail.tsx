@@ -255,7 +255,19 @@ export default function ProblemDetail() {
     patternId: SAMPLE_PROBLEM.pattern,
   };
   const [lang, setLang] = useState<Lang>('java');
-  const [code, setCode] = useState(STARTER[problem.id]?.[lang] ?? DEFAULT_STARTER(lang));
+  
+  const getSnippet = useCallback((l: string, p: any) => {
+    if (p.metaData?.codeSnippets) {
+      // LeetCode lang slugs: python3, javascript, java, cpp
+      const slugMap: Record<string, string> = { python: 'python3', javascript: 'javascript', java: 'java', cpp: 'cpp' };
+      const targetSlug = slugMap[l] || l;
+      const match = p.metaData.codeSnippets.find((s: any) => s.langSlug === targetSlug || s.lang.toLowerCase() === targetSlug);
+      if (match) return match.code;
+    }
+    return STARTER[p.id]?.[l] ?? DEFAULT_STARTER(l);
+  }, []);
+
+  const [code, setCode] = useState(getSnippet(lang, problem));
   const [leftPanel, setLeftPanel] = useState<LeftPanel>('description');
   const [rightPanel, setRightPanel] = useState<RightPanel>('testcases');
   const [hintLevel, setHintLevel] = useState(0);
@@ -295,7 +307,7 @@ export default function ProblemDetail() {
 
   const handleLangChange = (l: Lang) => {
     setLang(l);
-    setCode(STARTER[id]?.[l] ?? DEFAULT_STARTER(l));
+    setCode(getSnippet(l, problem));
   };
 
   const handleRun = useCallback(async () => {

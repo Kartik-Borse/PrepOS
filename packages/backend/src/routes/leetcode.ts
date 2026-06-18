@@ -26,8 +26,13 @@ query getProblem($titleSlug: String!) {
     sampleTestCase
     metaData
     companyTagStats
+    codeSnippets {
+      lang
+      langSlug
+      code
+    }
   }
-}`;
+}';
 
 function slugFromUrl(url: string): string | null {
   // handles: https://leetcode.com/problems/two-sum/
@@ -101,12 +106,17 @@ router.post('/fetch', async (req: Request, res: Response) => {
     } catch { /* ignore */ }
 
     // Parse function signature metadata
-    let metaData: any = null;
+    let metaData: any = {};
     try {
       if (q.metaData) {
         metaData = JSON.parse(q.metaData);
       }
     } catch { /* ignore */ }
+    
+    // Attach codeSnippets to metaData
+    if (q.codeSnippets) {
+      metaData.codeSnippets = q.codeSnippets;
+    }
 
     const problem = {
       title: q.title,

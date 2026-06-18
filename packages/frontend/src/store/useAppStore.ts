@@ -18,6 +18,7 @@ export interface Problem {
   tags?: string[];
   selfRating?: 1 | 2 | 3 | 4 | 5;
   addedAt?: string;
+  metaData?: any;
 }
 
 export interface Attempt {
