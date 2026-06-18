@@ -105,6 +105,145 @@
 }
 .create-card:hover { border-color: var(--primary); color: var(--primary); transform: none; }
 
+/* View toggle */
+.view-toggle {
+  display: flex; gap: 3px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 8px; padding: 3px;
+}
+.vt-btn {
+  padding: 5px 16px; border-radius: 6px;
+  font-size: 12px; font-weight: 500; color: var(--text-dim);
+  transition: background 0.12s, color 0.12s;
+}
+.vt-btn:hover { color: var(--text); background: var(--surface2); }
+.vt-btn.active { background: var(--primary); color: #000; font-weight: 700; }
+
+/* ── All problems view ── */
+.all-problems { display: flex; flex-direction: column; gap: 14px; }
+
+.ap-filters { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+
+.ap-search-wrap {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 8px; padding: 6px 12px;
+  flex: 1; min-width: 200px;
+}
+.ap-search-icon { color: var(--text-dim); flex-shrink: 0; }
+.ap-search { background: none; border: none; font-size: 13px; color: var(--text); flex: 1; outline: none; }
+
+.filter-group {
+  display: flex; gap: 3px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 8px; padding: 3px;
+}
+.filter-btn {
+  padding: 5px 12px; border-radius: 5px; font-size: 12px; font-weight: 500;
+  color: var(--text-dim); background: none; border: none; cursor: pointer;
+}
+.filter-btn:hover { color: var(--text); background: var(--surface2); }
+.filter-btn.active { background: var(--primary); color: #000; font-weight: 700; }
+
+.pattern-select {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 8px; padding: 7px 12px;
+  font-size: 12px; color: var(--text); cursor: pointer; outline: none;
+  max-width: 180px;
+}
+.pattern-select:focus { border-color: var(--primary); }
+
+/* Stats chips */
+.ap-stats { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.ap-stat-chip {
+  padding: 3px 12px; border-radius: 20px; font-size: 12px; font-weight: 500;
+  background: var(--surface); border: 1px solid var(--border); color: var(--text-dim);
+}
+.easy-chip   { color: var(--easy);   border-color: rgba(0,184,163,0.3);  background: rgba(0,184,163,0.06); }
+.medium-chip { color: var(--medium); border-color: rgba(255,161,22,0.3); background: rgba(255,161,22,0.06); }
+.hard-chip   { color: var(--hard);   border-color: rgba(239,71,67,0.3);  background: rgba(239,71,67,0.06); }
+
+/* Problems table */
+.problems-table {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 12px; overflow: hidden;
+}
+
+.pt-head, .pt-row {
+  display: grid;
+  grid-template-columns: 36px 1fr 160px 90px 160px 44px 36px;
+  align-items: center;
+  padding: 10px 16px;
+  gap: 8px;
+}
+
+.pt-head {
+  font-size: 11px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.05em; color: var(--text-faint);
+  border-bottom: 1px solid var(--border);
+  background: var(--surface2);
+}
+
+.pt-row {
+  border-bottom: 1px solid var(--border);
+  cursor: pointer; transition: background 0.1s;
+}
+.pt-row:last-child { border-bottom: none; }
+.pt-row:hover { background: var(--surface2); }
+.pt-row:hover .col-ti { color: var(--primary); }
+
+.col-ti {
+  font-size: 13px; font-weight: 500;
+  display: flex; align-items: center; gap: 8px;
+  overflow: hidden;
+}
+.col-di { font-size: 12px; font-weight: 700; }
+
+.solved-badge {
+  font-size: 10px; font-weight: 600;
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 4px; padding: 1px 6px;
+  color: var(--text-faint); white-space: nowrap; flex-shrink: 0;
+}
+
+.pattern-pill {
+  padding: 2px 8px; border-radius: 4px;
+  font-size: 11px; font-weight: 600;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  display: inline-block; max-width: 150px;
+}
+
+.col-co { display: flex; flex-wrap: wrap; gap: 4px; }
+.co-chip {
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 4px; padding: 1px 6px; font-size: 11px; color: var(--text-dim);
+}
+
+.lc-badge {
+  background: rgba(255,161,22,0.12); color: var(--warning);
+  border: 1px solid rgba(255,161,22,0.3);
+  border-radius: 4px; padding: 2px 7px;
+  font-size: 10px; font-weight: 800; text-decoration: none; display: inline-block;
+}
+.lc-badge:hover { background: rgba(255,161,22,0.22); }
+
+.pt-empty {
+  text-align: center; padding: 32px; font-size: 13px; color: var(--text-faint);
+}
+
+.col-del { display: flex; align-items: center; justify-content: flex-end; }
+
+.row-del-btn {
+  display: flex; align-items: center; justify-content: center;
+  width: 26px; height: 26px; border-radius: 6px;
+  background: none; border: 1px solid transparent;
+  color: var(--text-faint); cursor: pointer;
+  opacity: 0; transition: opacity 0.15s, color 0.15s, border-color 0.15s, background 0.15s;
+}
+.pt-row:hover .row-del-btn { opacity: 1; }
+.row-del-btn:hover { color: var(--error); border-color: var(--error); background: rgba(239,71,67,0.08); }
+
+
 /* ── Manage Questions Modal rows ── */
 .mq-empty {
   text-align: center; padding: 32px; font-size: 13px; color: var(--text-faint);

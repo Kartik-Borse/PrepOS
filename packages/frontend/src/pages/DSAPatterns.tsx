@@ -19,7 +19,7 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import {
   ChevronRight, Plus, Trash2, X, CheckCircle2, RotateCcw, Circle, Link2,
-  GripVertical, ListChecks, ExternalLink,
+  GripVertical, ListChecks, ExternalLink, Search,
 } from 'lucide-react';
 import { useAppStore, Problem, CustomPattern } from '../store/useAppStore';
 import LeetcodeImport from '../components/LeetcodeImport';
@@ -373,10 +373,17 @@ export default function DSAPatterns() {
 
   const [showAddPattern, setShowAddPattern] = useState(false);
   const [showLCImport, setShowLCImport] = useState(false);
+  const [view, setView] = useState<'patterns' | 'all-problems'>('patterns');
   const [addQuestionFor, setAddQuestionFor] = useState<{ id: string; name: string } | null>(null);
   const [manageQuestionsFor, setManageQuestionsFor] = useState<{ id: string; name: string } | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<{ problem: Problem } | null>(null);
+
+  // All Problems filters
+  const [search, setSearch] = useState('');
+  const [diffFilter, setDiffFilter] = useState<'All' | 'Easy' | 'Medium' | 'Hard'>('All');
+  const [patternFilter, setPatternFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState<'All' | 'Solved' | 'Unsolved'>('All');
 
   // Merge and sort patterns — first apply user-defined order
   const builtinPatterns = BUILTIN_PATTERNS.map((p) => ({ ...p, isCustom: false }));
@@ -403,6 +410,30 @@ export default function DSAPatterns() {
     acc[p.patternId] = (acc[p.patternId] ?? 0) + 1;
     return acc;
   }, {});
+
+  // All Problems — sorted by latest solve then latest added
+  const allProblemsSorted = [...allProblems].sort((a, b) => {
+    const aS = solvedProblems[a.id];
+    const bS = solvedProblems[b.id];
+    if (aS && bS) return new Date(bS.solvedAt).getTime() - new Date(aS.solvedAt).getTime();
+    if (aS) return -1;
+    if (bS) return 1;
+    const aA = a.addedAt ? new Date(a.addedAt).getTime() : 0;
+    const bA = b.addedAt ? new Date(b.addedAt).getTime() : 0;
+    return bA - aA;
+  });
+
+  const filteredProblems = allProblemsSorted.filter((p) => {
+    const matchSearch  = p.title.toLowerCase().includes(search.toLowerCase());
+    const matchDiff    = diffFilter === 'All' || p.difficulty === diffFilter;
+    const matchPattern = patternFilter === 'all' || p.patternId === patternFilter;
+    const isSolved = solvedProblems[p.id]?.status === 'solved';
+    const matchStatus = statusFilter === 'All' || (statusFilter === 'Solved' && isSolved) || (statusFilter === 'Unsolved' && !isSolved);
+    return matchSearch && matchDiff && matchPattern && matchStatus;
+  });
+
+  const getPatternName  = (id: string) => allPatterns.find((p) => p.id === id)?.name ?? id;
+  const getPatternColor = (id: string) => allPatterns.find((p) => p.id === id)?.color ?? '#888';
 
   // ── DnD sensors ──
   const sensors = useSensors(
@@ -446,66 +477,208 @@ export default function DSAPatterns() {
           <p className="sub">{allPatterns.length} patterns · {allProblems.length} problems</p>
         </div>
         <div className="dsp-header-actions">
+          <div className="view-toggle">
+            <button className={`vt-btn ${view === 'patterns' ? 'active' : ''}`} onClick={() => setView('patterns')}>Patterns</button>
+            <button className={`vt-btn ${view === 'all-problems' ? 'active' : ''}`} onClick={() => setView('all-problems')}>All Problems</button>
+          </div>
           <button className="btn-lc-import" onClick={() => setShowLCImport(true)}>
             <Link2 size={14} /> Import from LC
           </button>
-          <button className="btn-add" onClick={() => setShowAddPattern(true)}>
-            <Plus size={14} /> New Pattern
-          </button>
+          {view === 'patterns' && (
+            <button className="btn-add" onClick={() => setShowAddPattern(true)}>
+              <Plus size={14} /> New Pattern
+            </button>
+          )}
         </div>
       </div>
 
-      {/* ── PATTERNS GRID with DnD ── */}
-      <DndContext
-        sensors={sensors}
-        collisionDetection={closestCenter}
-        onDragStart={handleDragStart}
-        onDragEnd={handleDragEnd}
-      >
-        <SortableContext items={allPatterns.map((p) => p.id)} strategy={rectSortingStrategy}>
-          <div className="patterns-grid">
-            {allPatterns.map((p) => {
-              const total = patternCounts[p.id] ?? p.count;
-              const solved = Object.keys(solvedProblems).filter((pid) =>
-                allProblems.find((prob) => prob.id === pid && prob.patternId === p.id)
-              ).length;
+      {/* ── PATTERNS VIEW ── */}
+      {view === 'patterns' && (
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
+        >
+          <SortableContext items={allPatterns.map((p) => p.id)} strategy={rectSortingStrategy}>
+            <div className="patterns-grid">
+              {allPatterns.map((p) => {
+                const total = patternCounts[p.id] ?? p.count;
+                const solved = Object.keys(solvedProblems).filter((pid) =>
+                  allProblems.find((prob) => prob.id === pid && prob.patternId === p.id)
+                ).length;
 
-              return (
-                <SortablePatternCard
-                  key={p.id}
-                  pattern={p}
-                  total={total}
-                  solved={solved}
-                  onAddQuestion={() => setAddQuestionFor({ id: p.id, name: p.name })}
-                  onManageQuestions={() => setManageQuestionsFor({ id: p.id, name: p.name })}
-                  onDelete={p.isCustom ? () => deletePattern(p.id as string) : undefined}
-                  onView={() => navigate(`/dsa/${p.id}`)}
-                />
-              );
-            })}
+                return (
+                  <SortablePatternCard
+                    key={p.id}
+                    pattern={p}
+                    total={total}
+                    solved={solved}
+                    onAddQuestion={() => setAddQuestionFor({ id: p.id, name: p.name })}
+                    onManageQuestions={() => setManageQuestionsFor({ id: p.id, name: p.name })}
+                    onDelete={p.isCustom ? () => deletePattern(p.id as string) : undefined}
+                    onView={() => navigate(`/dsa/${p.id}`)}
+                  />
+                );
+              })}
 
-            {/* Create pattern card */}
-            <button className="pattern-card create-card" onClick={() => setShowAddPattern(true)}>
-              <Plus size={28} style={{ color: 'var(--text-faint)' }} />
-              <span>Create Pattern</span>
-            </button>
-          </div>
-        </SortableContext>
+              {/* Create pattern card */}
+              <button className="pattern-card create-card" onClick={() => setShowAddPattern(true)}>
+                <Plus size={28} style={{ color: 'var(--text-faint)' }} />
+                <span>Create Pattern</span>
+              </button>
+            </div>
+          </SortableContext>
 
-        {/* Drag overlay — ghost card while dragging */}
-        <DragOverlay>
-          {activePattern && (
-            <div className="pattern-card pc-overlay">
-              <div className="pc-top">
-                <div className="pc-dot" style={{ background: activePattern.color }} />
-                <div className="pc-meta">
-                  <span className="pc-name">{activePattern.name}</span>
+          {/* Drag overlay */}
+          <DragOverlay>
+            {activePattern && (
+              <div className="pattern-card pc-overlay">
+                <div className="pc-top">
+                  <div className="pc-dot" style={{ background: activePattern.color }} />
+                  <div className="pc-meta">
+                    <span className="pc-name">{activePattern.name}</span>
+                  </div>
                 </div>
               </div>
+            )}
+          </DragOverlay>
+        </DndContext>
+      )}
+
+      {/* ── ALL PROBLEMS VIEW ── */}
+      {view === 'all-problems' && (
+        <div className="all-problems">
+          {/* Filters */}
+          <div className="ap-filters">
+            <div className="ap-search-wrap">
+              <Search size={13} className="ap-search-icon" />
+              <input
+                className="ap-search"
+                placeholder="Search problems…"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                aria-label="Search problems"
+              />
             </div>
-          )}
-        </DragOverlay>
-      </DndContext>
+            <div className="filter-group">
+              {(['All', 'Easy', 'Medium', 'Hard'] as const).map((d) => (
+                <button key={d} className={`filter-btn ${diffFilter === d ? 'active' : ''}`} onClick={() => setDiffFilter(d)}>{d}</button>
+              ))}
+            </div>
+            <select
+              className="pattern-select"
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value as any)}
+              aria-label="Filter by status"
+            >
+              <option value="All">All Status</option>
+              <option value="Solved">Solved</option>
+              <option value="Unsolved">Unsolved</option>
+            </select>
+            <select
+              className="pattern-select"
+              value={patternFilter}
+              onChange={(e) => setPatternFilter(e.target.value)}
+              aria-label="Filter by pattern"
+            >
+              <option value="all">All Patterns</option>
+              {allPatterns.map((p) => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </select>
+            <button
+              className="btn-add"
+              onClick={() => setAddQuestionFor({
+                id: patternFilter === 'all' ? allPatterns[0].id : patternFilter,
+                name: getPatternName(patternFilter === 'all' ? allPatterns[0].id : patternFilter),
+              })}
+            >
+              <Plus size={14} /> Add Question
+            </button>
+          </div>
+
+          {/* Stats */}
+          <div className="ap-stats">
+            <span className="ap-stat-chip">{filteredProblems.length} shown</span>
+            <span className="ap-stat-chip easy-chip">{filteredProblems.filter((p) => p.difficulty === 'Easy').length} Easy</span>
+            <span className="ap-stat-chip medium-chip">{filteredProblems.filter((p) => p.difficulty === 'Medium').length} Medium</span>
+            <span className="ap-stat-chip hard-chip">{filteredProblems.filter((p) => p.difficulty === 'Hard').length} Hard</span>
+            <span className="ap-stat-chip" style={{ marginLeft: 'auto', color: 'var(--primary)', borderColor: 'var(--primary-dim)' }}>↓ sorted by latest solve</span>
+          </div>
+
+          {/* Table */}
+          <div className="problems-table">
+            <div className="pt-head">
+              <span className="col-st">Status</span>
+              <span className="col-ti">Title</span>
+              <span className="col-pa">Pattern</span>
+              <span className="col-di">Difficulty</span>
+              <span className="col-co">Companies</span>
+              <span className="col-lc">LC</span>
+              <span className="col-del" />
+            </div>
+
+            {filteredProblems.length === 0 && (
+              <div className="pt-empty">No problems found. Add questions to your patterns!</div>
+            )}
+
+            {filteredProblems.map((p) => {
+              const status = solvedProblems[p.id]?.status;
+              const latestSolve = solvedProblems[p.id];
+              return (
+                <div
+                  key={p.id}
+                  className="pt-row"
+                  onClick={() => navigate(`/problem/${p.id}`)}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => e.key === 'Enter' && navigate(`/problem/${p.id}`)}
+                >
+                  <span className="col-st">
+                    {status === 'solved' ? <CheckCircle2 size={15} style={{ color: 'var(--success)' }} /> :
+                     status === 'revision' ? <RotateCcw size={15} style={{ color: 'var(--warning)' }} /> :
+                     <Circle size={15} style={{ color: 'var(--text-faint)' }} />}
+                  </span>
+                  <span className="col-ti">
+                    {p.title}
+                    {latestSolve && (
+                      <span className="solved-badge">
+                        {latestSolve.status === 'solved' ? '✓' : '↻'} {timeAgo(latestSolve.solvedAt)}
+                      </span>
+                    )}
+                  </span>
+                  <span className="col-pa">
+                    <span className="pattern-pill" style={{ background: getPatternColor(p.patternId) + '22', color: getPatternColor(p.patternId) }}>
+                      {getPatternName(p.patternId)}
+                    </span>
+                  </span>
+                  <span className="col-di" style={{ color: diffColor(p.difficulty) }}>{p.difficulty}</span>
+                  <span className="col-co">
+                    {p.companies.slice(0, 2).map((c) => <span key={c} className="co-chip">{c}</span>)}
+                    {p.companies.length > 2 && <span className="co-chip">+{p.companies.length - 2}</span>}
+                  </span>
+                  <span className="col-lc">
+                    {p.leetcodeLink && (
+                      <a href={p.leetcodeLink} target="_blank" rel="noreferrer" className="lc-badge" onClick={(e) => e.stopPropagation()}>LC</a>
+                    )}
+                  </span>
+                  <span className="col-del">
+                    <button
+                      className="row-del-btn"
+                      title="Remove question"
+                      onClick={(e) => { e.stopPropagation(); setConfirmDelete({ problem: p }); }}
+                      aria-label={`Remove ${p.title}`}
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* ── Modals ── */}
       {showAddPattern && (
@@ -587,4 +760,17 @@ export default function DSAPatterns() {
       )}
     </div>
   );
+}
+
+// ── Helper ────────────────────────────────────────────────────────────────────
+function timeAgo(iso: string): string {
+  const diff = Date.now() - new Date(iso).getTime();
+  const mins  = Math.floor(diff / 60000);
+  const hours = Math.floor(diff / 3600000);
+  const days  = Math.floor(diff / 86400000);
+  if (mins < 1)  return 'just now';
+  if (hours < 1) return `${mins}m ago`;
+  if (days < 1)  return `${hours}h ago`;
+  if (days < 30) return `${days}d ago`;
+  return new Date(iso).toLocaleDateString();
 }

@@ -92,7 +92,7 @@ const SAMPLE_PROBLEM = {
 
 type Lang = 'python' | 'javascript' | 'cpp' | 'java';
 type LeftPanel = 'description' | 'approach' | 'hints' | 'notes' | 'history' | 'visual';
-type RightPanel = 'testcases' | 'result' | 'steps';
+type RightPanel = 'testcases' | 'result' | 'steps' | 'analysis';
 
 // ── Approaches: Brute Force → Optimal ────────────────────────────────────────
 const APPROACHES = [
@@ -470,9 +470,9 @@ export default function ProblemDetail() {
           {/* Test panel */}
           <div className="test-panel">
             <div className="test-tabs">
-              {(['testcases', 'result', 'steps'] as RightPanel[]).map((t) => (
+              {(['testcases', 'result', 'steps', 'analysis'] as RightPanel[]).map((t) => (
                 <button key={t} className={`test-tab ${rightPanel === t ? 'active' : ''}`} onClick={() => setRightPanel(t)}>
-                  {t === 'testcases' ? 'Test Cases' : t === 'result' ? 'Result' : 'Step-by-Step'}
+                  {t === 'testcases' ? 'Test Cases' : t === 'result' ? 'Result' : t === 'steps' ? 'Step-by-Step' : 'TC/SC Analysis'}
                 </button>
               ))}
             </div>
@@ -566,6 +566,38 @@ export default function ProblemDetail() {
                       ))}
                     </div>
                   </>
+                )}
+              </div>
+            )}
+
+            {/* TC/SC Analysis */}
+            {rightPanel === 'analysis' && (
+              <div className="steps-panel">
+                {!results ? (
+                  <div className="result-empty">Run your code first to analyze complexity</div>
+                ) : (
+                  <div className="tcsc-analysis-panel" style={{ padding: 16 }}>
+                    <h3 style={{ marginBottom: 16, fontSize: 14, color: 'var(--text)' }}>Complexity Analysis</h3>
+                    <div style={{ marginBottom: 16 }}>
+                      <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+                        <span className="tag tc" style={{ background: 'var(--primary-dim)', color: 'var(--primary)', padding: '4px 8px', borderRadius: 4, fontSize: 12, fontWeight: 600 }}>TC: O(n)</span>
+                        <span className="tag sc" style={{ background: 'var(--success-dim)', color: 'var(--success)', padding: '4px 8px', borderRadius: 4, fontSize: 12, fontWeight: 600 }}>SC: O(min(n, m))</span>
+                      </div>
+                      <p style={{ fontSize: 13, color: 'var(--text-dim)', lineHeight: 1.6, marginBottom: 12 }}>
+                        <strong>Time Complexity Explanation:</strong><br />The algorithm iterates through the string of length <code style={{color: 'var(--primary)'}}>n</code> exactly once using the <code>right</code> pointer. In the worst case, the hash map lookups take O(1) time. Thus, the total time taken is strictly proportional to <code style={{color: 'var(--primary)'}}>n</code>.
+                      </p>
+                      <p style={{ fontSize: 13, color: 'var(--text-dim)', lineHeight: 1.6, marginBottom: 16 }}>
+                        <strong>Space Complexity Explanation:</strong><br />The hash map stores at most the number of unique characters in the string. If the string consists of characters from a fixed alphabet (e.g. ASCII of size <code style={{color: 'var(--primary)'}}>m = 128</code>), the space is O(m) which simplifies to O(1). In general terms where <code style={{color: 'var(--primary)'}}>m</code> is the charset size, it takes O(min(n, m)) auxiliary space.
+                      </p>
+                    </div>
+                    <div className="ai-ask" style={{ marginTop: 'auto', borderTop: '1px solid var(--border)', paddingTop: 16 }}>
+                      <div className="ai-ask-label">Ask AI about complexity</div>
+                      <div className="ai-ask-row">
+                        <input placeholder="Why isn't it O(n^2)?" className="ai-ask-input" />
+                        <button className="ai-ask-btn">Ask</button>
+                      </div>
+                    </div>
+                  </div>
                 )}
               </div>
             )}
