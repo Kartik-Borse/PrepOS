@@ -164,7 +164,7 @@ export default function ProblemDetail() {
   const [noteText, setNoteText] = useState('');
   const [noteSaved, setNoteSaved] = useState(false);
   const timerRef = useRef<ReturnType<typeof setInterval>>();
-  const { setProblemNote, problemNotes, addAttempt, attempts, markSolved, solvedProblems } = useAppStore();
+  const { setProblemNote, problemNotes, addAttempt, updateAttempt, attempts, markSolved, solvedProblems } = useAppStore();
 
   const existingNote = problemNotes.find((n) => n.problemId === id);
   const myAttempts = attempts.filter((a) => a.problemId === id);
@@ -195,6 +195,16 @@ export default function ProblemDetail() {
     setRunning(true);
     setRightPanel('result');
     setTimeout(() => {
+      const res = runCode(code, lang, SAMPLE_PROBLEM.testCases);
+      setResults(res);
+      setRunning(false);
+    }, 1500);
+  }, [code, lang]);
+
+  const handleSubmit = useCallback(() => {
+    setRunning(true);
+    setRightPanel('result');
+    setTimeout(() => {
     const res = runCode(code, lang, SAMPLE_PROBLEM.testCases);
       setResults(res);
       setRunning(false);
@@ -214,7 +224,7 @@ export default function ProblemDetail() {
       });
       if (allPass) markSolved(id, 'solved');
     }, 1500);
-  }, [code, lang, elapsed, id]);
+  }, [code, lang, elapsed, id, hintLevel, addAttempt, markSolved]);
 
   const saveNote = () => {
     setProblemNote(id, noteText);
@@ -420,7 +430,13 @@ export default function ProblemDetail() {
                           <span className="hi-time">{formatTime(a.timeTaken)}</span>
                           <span className="hi-date">{new Date(a.date).toLocaleDateString()}</span>
                         </div>
-                        <pre className="hi-code">{a.code.slice(0, 200)}{a.code.length > 200 ? '…' : ''}</pre>
+                        <div className="hi-fields" style={{ display: 'flex', gap: '8px', marginTop: '8px', flexWrap: 'wrap' }}>
+                          <input type="text" placeholder="Title..." value={a.title || ''} onChange={(e) => updateAttempt(a.id, { title: e.target.value })} style={{ flex: 1, padding: '4px', background: 'var(--bg-secondary)', border: '1px solid var(--border)', color: 'var(--text)', borderRadius: '4px' }} />
+                          <input type="text" placeholder="TC (e.g. O(n))" value={a.timeComplexity || ''} onChange={(e) => updateAttempt(a.id, { timeComplexity: e.target.value })} style={{ width: '100px', padding: '4px', background: 'var(--bg-secondary)', border: '1px solid var(--border)', color: 'var(--text)', borderRadius: '4px' }} />
+                          <input type="text" placeholder="SC (e.g. O(1))" value={a.spaceComplexity || ''} onChange={(e) => updateAttempt(a.id, { spaceComplexity: e.target.value })} style={{ width: '100px', padding: '4px', background: 'var(--bg-secondary)', border: '1px solid var(--border)', color: 'var(--text)', borderRadius: '4px' }} />
+                        </div>
+                        <textarea placeholder="Add a note for this attempt..." value={a.note || ''} onChange={(e) => updateAttempt(a.id, { note: e.target.value })} style={{ width: '100%', padding: '4px', marginTop: '8px', background: 'var(--bg-secondary)', border: '1px solid var(--border)', color: 'var(--text)', borderRadius: '4px', minHeight: '40px', resize: 'vertical' }} />
+                        <pre className="hi-code" style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', maxHeight: '300px', overflowY: 'auto', marginTop: '8px' }}>{a.code}</pre>
                       </div>
                     ))}
                   </div>
@@ -447,7 +463,7 @@ export default function ProblemDetail() {
               <button className="run-btn" onClick={handleRun} disabled={running}>
                 <Play size={13} />{running ? 'Running…' : 'Run'}
               </button>
-              <button className="submit-btn" onClick={handleRun} disabled={running}>
+              <button className="submit-btn" onClick={handleSubmit} disabled={running}>
                 <Send size={13} />Submit
               </button>
             </div>

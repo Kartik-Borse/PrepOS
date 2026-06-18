@@ -32,6 +32,10 @@ export interface Attempt {
   timeTaken: number; // seconds
   hintsUsed: number;
   date: string;
+  timeComplexity?: string;
+  spaceComplexity?: string;
+  note?: string;
+  title?: string;
 }
 
 export interface MistakeEntry {
@@ -181,6 +185,7 @@ interface AppState {
 
   attempts: Attempt[];
   addAttempt: (a: Attempt) => void;
+  updateAttempt: (id: string, updates: Partial<Attempt>) => void;
 
   mistakes: MistakeEntry[];
   addMistake: (m: MistakeEntry) => void;
@@ -253,6 +258,7 @@ export const useAppStore = create<AppState>()(
 
       attempts: [],
       addAttempt: (a) => set((s) => ({ attempts: [a, ...s.attempts] })),
+      updateAttempt: (id, updates) => set((s) => ({ attempts: s.attempts.map((a) => a.id === id ? { ...a, ...updates } : a) })),
 
       mistakes: [],
       addMistake: (m) => set((s) => ({ mistakes: [m, ...s.mistakes] })),
