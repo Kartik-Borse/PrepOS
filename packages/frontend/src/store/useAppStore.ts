@@ -133,6 +133,15 @@ export interface CustomPattern {
   createdAt: string;
 }
 
+export interface DashboardConfig {
+  widgetOrder: string[];
+  hiddenWidgets: string[];
+  dailyGoal: {
+    targetProblems: number;
+    tasks: string[];
+  };
+}
+
 // ── Default HR Questions ───────────────────────────────
 
 const DEFAULT_HR_QUESTIONS: HRQuestion[] = [
@@ -168,7 +177,10 @@ const DEFAULT_CODE_SNIPPETS: CodeSnippet[] = [
   { id: 'cs1', title: 'BFS Template', language: 'python', tags: ['BFS','Graph','Tree'], createdAt: new Date().toISOString(), code: `from collections import deque\n\ndef bfs(graph, start):\n    visited = set()\n    q = deque([start])\n    visited.add(start)\n    while q:\n        node = q.popleft()\n        for neighbor in graph[node]:\n            if neighbor not in visited:\n                visited.add(neighbor)\n                q.append(neighbor)` },
   { id: 'cs2', title: 'Binary Search', language: 'python', tags: ['Binary Search'], createdAt: new Date().toISOString(), code: `def binary_search(arr, target):\n    lo, hi = 0, len(arr) - 1\n    while lo <= hi:\n        mid = (lo + hi) // 2\n        if arr[mid] == target:\n            return mid\n        elif arr[mid] < target:\n            lo = mid + 1\n        else:\n            hi = mid - 1\n    return -1` },
   { id: 'cs3', title: 'Union Find', language: 'python', tags: ['Graph','Union Find'], createdAt: new Date().toISOString(), code: `class UnionFind:\n    def __init__(self, n):\n        self.parent = list(range(n))\n        self.rank = [0] * n\n    def find(self, x):\n        if self.parent[x] != x:\n            self.parent[x] = self.find(self.parent[x])\n        return self.parent[x]\n    def union(self, x, y):\n        px, py = self.find(x), self.find(y)\n        if px == py: return False\n        if self.rank[px] < self.rank[py]: px, py = py, px\n        self.parent[py] = px\n        if self.rank[px] == self.rank[py]: self.rank[px] += 1\n        return True` },
+  { id: 'cs4', title: 'AI: Dijkstra Shortest Path', language: 'python', tags: ['Graph','Shortest Path','AI'], createdAt: new Date().toISOString(), code: `import heapq\n\ndef dijkstra(graph, start):\n    # graph is an adjacency list: {node: [(neighbor, weight)]}\n    distances = {node: float('inf') for node in graph}\n    distances[start] = 0\n    pq = [(0, start)]\n    \n    while pq:\n        current_dist, current_node = heapq.heappop(pq)\n        \n        if current_dist > distances[current_node]:\n            continue\n            \n        for neighbor, weight in graph[current_node]:\n            distance = current_dist + weight\n            if distance < distances[neighbor]:\n                distances[neighbor] = distance\n                heapq.heappush(pq, (distance, neighbor))\n                \n    return distances` },
+  { id: 'cs5', title: 'AI: Monotonic Stack', language: 'python', tags: ['Stack','Array','AI'], createdAt: new Date().toISOString(), code: `def next_greater_elements(nums):\n    """\n    Finds the next greater element for each element in the array.\n    Returns a list of the same length with the NGE, or -1 if none exists.\n    """\n    n = len(nums)\n    res = [-1] * n\n    stack = [] # Stores indices\n    \n    for i in range(n):\n        while stack and nums[stack[-1]] < nums[i]:\n            idx = stack.pop()\n            res[idx] = nums[i]\n        stack.append(i)\n        \n    return res` }
 ];
+
 
 // ── Store ──────────────────────────────────────────────
 
@@ -234,14 +246,30 @@ interface AppState {
   patternOrder: string[];
   reorderPatterns: (newOrder: string[]) => void;
 
-  solvedProblems: Record<string, { status: 'solved' | 'revision'; solvedAt: string }>;
-  markSolved: (problemId: string, status: 'solved' | 'revision') => void;
+  dashboardConfig: DashboardConfig;
+  updateDashboardConfig: (updates: Partial<DashboardConfig>) => void;
+  hideWidget: (widgetId: string) => void;
+  unhideWidget: (widgetId: string) => void;
+  reorderWidgets: (newOrder: string[]) => void;
+  updateDailyGoal: (targetProblems: number, tasks: string[]) => void;
+
+  solvedProblems: Record<string, { status: 'solved' | 'revision'; solvedAt: string; nextRevisionAt?: string }>;
+  markSolved: (problemId: string, status: 'solved' | 'revision', nextRevisionAt?: string) => void;
 }
 
 const DEFAULT_RESUME: ResumeData = {
   name: '', email: '', phone: '', college: '', degree: 'B.Tech Computer Science',
   graduationYear: '2026', cgpa: '', skills: '', achievements: '', links: '',
   projects: [{ title: '', tech: '', description: '' }],
+};
+
+const DEFAULT_DASHBOARD_CONFIG: DashboardConfig = {
+  widgetOrder: ['stats', 'patterns', 'revision', 'goal', 'heatmap', 'companies', 'cheatsheet'],
+  hiddenWidgets: [],
+  dailyGoal: {
+    targetProblems: 5,
+    tasks: ['Solve 2 Easy problems', 'Complete 1 Medium', 'Solve 1 Hard', 'Review 1 revision', 'Take aptitude quiz'],
+  },
 };
 
 export const useAppStore = create<AppState>()(
@@ -328,9 +356,16 @@ export const useAppStore = create<AppState>()(
       patternOrder: [],
       reorderPatterns: (newOrder) => set(() => ({ patternOrder: newOrder })),
 
+      dashboardConfig: DEFAULT_DASHBOARD_CONFIG,
+      updateDashboardConfig: (updates) => set((s) => ({ dashboardConfig: { ...s.dashboardConfig, ...updates } })),
+      hideWidget: (widgetId) => set((s) => ({ dashboardConfig: { ...s.dashboardConfig, hiddenWidgets: [...s.dashboardConfig.hiddenWidgets, widgetId] } })),
+      unhideWidget: (widgetId) => set((s) => ({ dashboardConfig: { ...s.dashboardConfig, hiddenWidgets: s.dashboardConfig.hiddenWidgets.filter((w) => w !== widgetId) } })),
+      reorderWidgets: (newOrder) => set((s) => ({ dashboardConfig: { ...s.dashboardConfig, widgetOrder: newOrder } })),
+      updateDailyGoal: (targetProblems, tasks) => set((s) => ({ dashboardConfig: { ...s.dashboardConfig, dailyGoal: { targetProblems, tasks } } })),
+
       solvedProblems: {},
-      markSolved: (problemId, status) =>
-        set((s) => ({ solvedProblems: { ...s.solvedProblems, [problemId]: { status, solvedAt: new Date().toISOString() } } })),
+      markSolved: (problemId, status, nextRevisionAt) =>
+        set((s) => ({ solvedProblems: { ...s.solvedProblems, [problemId]: { status, solvedAt: new Date().toISOString(), nextRevisionAt } } })),
     }),
     { name: 'prepos-storage' }
   )

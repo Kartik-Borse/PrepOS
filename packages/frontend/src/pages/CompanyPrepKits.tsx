@@ -144,6 +144,21 @@ export default function CompanyPrepKits() {
             </div>
           </div>
 
+          {/* AI Recommendation */}
+          <div className="ai-insight-card" style={{ background: 'var(--bg-secondary)', border: `1px solid ${kit.color}44`, borderRadius: '12px', padding: '16px', marginBottom: '24px', display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
+            <div style={{ background: kit.color, padding: '8px', borderRadius: '50%', color: '#fff', display: 'flex' }}>
+              <CheckCircle2 size={18} />
+            </div>
+            <div>
+              <h3 style={{ color: kit.color, marginBottom: '4px', fontSize: '15px' }}>AI Readiness Insight for {kit.company}</h3>
+              <p style={{ color: 'var(--text-dim)', fontSize: '13px', lineHeight: 1.5 }}>
+                {readiness < 50 
+                  ? `You need to solve more core problems to be ready for ${kit.company}. Focus on their heavily tested areas like ${kit.focus.split(',')[0].toLowerCase()}.`
+                  : `You are on track for ${kit.company}! Make sure you are comfortable with ${kit.csTopics[0]} as it's frequently asked in recent interviews.`}
+              </p>
+            </div>
+          </div>
+
           {/* DSA Problems */}
           <div className="cpd-section">
             <h3>Must-Solve DSA Problems ({solvedCount}/{kit.problems.length})</h3>

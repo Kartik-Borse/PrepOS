@@ -91,8 +91,8 @@ const SAMPLE_PROBLEM = {
 };
 
 type Lang = 'python' | 'javascript' | 'cpp' | 'java';
-type LeftPanel = 'description' | 'approach' | 'hints' | 'notes' | 'history' | 'visual';
-type RightPanel = 'testcases' | 'result' | 'steps' | 'analysis';
+type LeftPanel = 'description' | 'approach' | 'hints' | 'notes' | 'history' | 'visual' | 'analysis';
+type RightPanel = 'testcases' | 'result' | 'steps';
 
 // ── Approaches: Brute Force → Optimal ────────────────────────────────────────
 const APPROACHES = [
@@ -161,6 +161,7 @@ export default function ProblemDetail() {
   const [elapsed, setElapsed] = useState(0);
   const [selectedTest, setSelectedTest] = useState(0);
   const [selectedStep, setSelectedStep] = useState(0);
+  const [revisionDate, setRevisionDate] = useState('');
   const [noteText, setNoteText] = useState('');
   const [noteSaved, setNoteSaved] = useState(false);
   const timerRef = useRef<ReturnType<typeof setInterval>>();
@@ -222,9 +223,9 @@ export default function ProblemDetail() {
         hintsUsed: hintLevel,
         date: new Date().toISOString(),
       });
-      if (allPass) markSolved(id, 'solved');
+      if (allPass) markSolved(id, 'solved', revisionDate || new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString());
     }, 1500);
-  }, [code, lang, elapsed, id, hintLevel, addAttempt, markSolved]);
+  }, [code, lang, elapsed, id, hintLevel, addAttempt, markSolved, revisionDate]);
 
   const saveNote = () => {
     setProblemNote(id, noteText);
@@ -277,6 +278,7 @@ export default function ProblemDetail() {
               ['visual', 'Visualize'],
               ['notes', 'My Notes'],
               ['history', 'History'],
+              ['analysis', 'TC/SC'],
             ] as [LeftPanel, string][]).map(([key, label]) => (
               <button key={key} className={`pd-tab ${leftPanel === key ? 'active' : ''}`} onClick={() => setLeftPanel(key)}>
                 {label}
@@ -443,6 +445,38 @@ export default function ProblemDetail() {
                 )}
               </div>
             )}
+
+            {/* TC/SC Analysis */}
+            {leftPanel === 'analysis' && (
+              <div className="pd-history">
+                <h2>Complexity Analysis</h2>
+                {!results ? (
+                  <p className="empty-state">Run your code first to analyze complexity.</p>
+                ) : (
+                  <div className="tcsc-analysis-panel" style={{ padding: 16 }}>
+                    <div style={{ marginBottom: 16 }}>
+                      <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+                        <span className="tag tc" style={{ background: 'var(--primary-dim)', color: 'var(--primary)', padding: '4px 8px', borderRadius: 4, fontSize: 12, fontWeight: 600 }}>TC: O(n)</span>
+                        <span className="tag sc" style={{ background: 'var(--success-dim)', color: 'var(--success)', padding: '4px 8px', borderRadius: 4, fontSize: 12, fontWeight: 600 }}>SC: O(min(n, m))</span>
+                      </div>
+                      <p style={{ fontSize: 13, color: 'var(--text-dim)', lineHeight: 1.6, marginBottom: 12 }}>
+                        <strong>Time Complexity Explanation:</strong><br />The algorithm iterates through the string of length <code style={{color: 'var(--primary)'}}>n</code> exactly once using the <code>right</code> pointer. In the worst case, the hash map lookups take O(1) time. Thus, the total time taken is strictly proportional to <code style={{color: 'var(--primary)'}}>n</code>.
+                      </p>
+                      <p style={{ fontSize: 13, color: 'var(--text-dim)', lineHeight: 1.6, marginBottom: 16 }}>
+                        <strong>Space Complexity Explanation:</strong><br />The hash map stores at most the number of unique characters in the string. If the string consists of characters from a fixed alphabet (e.g. ASCII of size <code style={{color: 'var(--primary)'}}>m = 128</code>), the space is O(m) which simplifies to O(1). In general terms where <code style={{color: 'var(--primary)'}}>m</code> is the charset size, it takes O(min(n, m)) auxiliary space.
+                      </p>
+                    </div>
+                    <div className="ai-ask" style={{ marginTop: 'auto', borderTop: '1px solid var(--border)', paddingTop: 16 }}>
+                      <div className="ai-ask-label">Ask AI about complexity</div>
+                      <div className="ai-ask-row">
+                        <input placeholder="Why isn't it O(n^2)?" className="ai-ask-input" />
+                        <button className="ai-ask-btn">Ask</button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
@@ -486,9 +520,9 @@ export default function ProblemDetail() {
           {/* Test panel */}
           <div className="test-panel">
             <div className="test-tabs">
-              {(['testcases', 'result', 'steps', 'analysis'] as RightPanel[]).map((t) => (
+              {(['testcases', 'result', 'steps'] as RightPanel[]).map((t) => (
                 <button key={t} className={`test-tab ${rightPanel === t ? 'active' : ''}`} onClick={() => setRightPanel(t)}>
-                  {t === 'testcases' ? 'Test Cases' : t === 'result' ? 'Result' : t === 'steps' ? 'Step-by-Step' : 'TC/SC Analysis'}
+                  {t === 'testcases' ? 'Test Cases' : t === 'result' ? 'Result' : 'Step-by-Step'}
                 </button>
               ))}
             </div>
@@ -542,7 +576,13 @@ export default function ProblemDetail() {
                         <div className="result-title">{allPassed ? 'Accepted' : 'Wrong Answer'}</div>
                         <div className="result-sub">{passedCount}/{results.length} test cases · {results[0]?.runtimeMs}ms · {(results[0]?.memoryKB / 1000).toFixed(1)} MB</div>
                       </div>
-                      {allPassed && <div className="xp-pill">+25 XP 🎉</div>}
+                      {allPassed ? (
+                        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>Revision:</span>
+                          <input type="date" value={revisionDate} onChange={(e) => setRevisionDate(e.target.value)} style={{ padding: '4px', background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', borderRadius: '4px', fontSize: 12 }} />
+                          <button onClick={() => markSolved(id, 'solved', revisionDate)} style={{ padding: '4px 8px', background: '#fff', border: 'none', color: '#000', borderRadius: '4px', fontSize: 12, cursor: 'pointer', fontWeight: 600 }}>Save</button>
+                        </div>
+                      ) : null}
                     </div>
                     <div className="result-cases">
                       {results.map((r, i) => (
@@ -582,38 +622,6 @@ export default function ProblemDetail() {
                       ))}
                     </div>
                   </>
-                )}
-              </div>
-            )}
-
-            {/* TC/SC Analysis */}
-            {rightPanel === 'analysis' && (
-              <div className="steps-panel">
-                {!results ? (
-                  <div className="result-empty">Run your code first to analyze complexity</div>
-                ) : (
-                  <div className="tcsc-analysis-panel" style={{ padding: 16 }}>
-                    <h3 style={{ marginBottom: 16, fontSize: 14, color: 'var(--text)' }}>Complexity Analysis</h3>
-                    <div style={{ marginBottom: 16 }}>
-                      <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
-                        <span className="tag tc" style={{ background: 'var(--primary-dim)', color: 'var(--primary)', padding: '4px 8px', borderRadius: 4, fontSize: 12, fontWeight: 600 }}>TC: O(n)</span>
-                        <span className="tag sc" style={{ background: 'var(--success-dim)', color: 'var(--success)', padding: '4px 8px', borderRadius: 4, fontSize: 12, fontWeight: 600 }}>SC: O(min(n, m))</span>
-                      </div>
-                      <p style={{ fontSize: 13, color: 'var(--text-dim)', lineHeight: 1.6, marginBottom: 12 }}>
-                        <strong>Time Complexity Explanation:</strong><br />The algorithm iterates through the string of length <code style={{color: 'var(--primary)'}}>n</code> exactly once using the <code>right</code> pointer. In the worst case, the hash map lookups take O(1) time. Thus, the total time taken is strictly proportional to <code style={{color: 'var(--primary)'}}>n</code>.
-                      </p>
-                      <p style={{ fontSize: 13, color: 'var(--text-dim)', lineHeight: 1.6, marginBottom: 16 }}>
-                        <strong>Space Complexity Explanation:</strong><br />The hash map stores at most the number of unique characters in the string. If the string consists of characters from a fixed alphabet (e.g. ASCII of size <code style={{color: 'var(--primary)'}}>m = 128</code>), the space is O(m) which simplifies to O(1). In general terms where <code style={{color: 'var(--primary)'}}>m</code> is the charset size, it takes O(min(n, m)) auxiliary space.
-                      </p>
-                    </div>
-                    <div className="ai-ask" style={{ marginTop: 'auto', borderTop: '1px solid var(--border)', paddingTop: 16 }}>
-                      <div className="ai-ask-label">Ask AI about complexity</div>
-                      <div className="ai-ask-row">
-                        <input placeholder="Why isn't it O(n^2)?" className="ai-ask-input" />
-                        <button className="ai-ask-btn">Ask</button>
-                      </div>
-                    </div>
-                  </div>
                 )}
               </div>
             )}
