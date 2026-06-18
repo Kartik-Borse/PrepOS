@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { Play, Clock, CheckCircle2, XCircle, Trophy, RefreshCw } from 'lucide-react';
+import { Play, Clock, CheckCircle2, XCircle, Trophy } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 import { BUILTIN_PROBLEMS } from './DSAPatterns';
 import './MockContest.css';
@@ -31,7 +31,13 @@ const STATIC_CONTEST_SETS = [
 ];
 
 type ContestState = 'lobby' | 'running' | 'finished';
-type ContestSet = typeof STATIC_CONTEST_SETS[0];
+type ContestSet = {
+  id: string;
+  title: string;
+  duration: number;
+  company: string;
+  problems: { id: string; title: string; difficulty: 'Easy' | 'Medium' | 'Hard' }[];
+};
 
 const diffColor = (d: string) => d === 'Easy' ? 'var(--easy)' : d === 'Medium' ? 'var(--medium)' : 'var(--hard)';
 

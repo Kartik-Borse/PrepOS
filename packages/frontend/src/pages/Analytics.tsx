@@ -13,7 +13,7 @@ const companies = [
 ];
 
 export default function Analytics() {
-  const { solvedProblems, attempts, mistakes } = useAppStore();
+  const { solvedProblems, attempts } = useAppStore();
   const user = useAuthStore(s => s.user);
 
   const solvedCount = Object.keys(solvedProblems).length;
@@ -21,15 +21,6 @@ export default function Analytics() {
   const solvedToday = Object.values(solvedProblems).filter(p => new Date(p.solvedAt) > new Date(new Date().setHours(0,0,0,0))).length;
   const avgDaily = solvedThisWeek > 0 ? (solvedThisWeek / 7).toFixed(1) : '0';
 
-  // Real-time difficulty breakdown from solved problems
-  const solvedEntries = Object.entries(solvedProblems);
-  const easyCount  = attempts.filter(a => solvedProblems[a.problemId] && a.status === 'Accepted').length; // fallback
-  const diffCounts = { Easy: 0, Medium: 0, Hard: 0 };
-  // Use attempts to derive difficulty
-  const acceptedAttempts = attempts.filter(a => a.status === 'Accepted');
-  acceptedAttempts.forEach(a => {
-    // attempt has no difficulty directly — use a rough split from solvedCount
-  });
   const easyVal  = Math.floor(solvedCount * 0.45) || 0;
   const medVal   = Math.floor(solvedCount * 0.40) || 0;
   const hardVal  = Math.max(0, solvedCount - easyVal - medVal);
