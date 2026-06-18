@@ -52,17 +52,73 @@ const BUILTIN_PATTERNS = [
 
 // ── Built-in sample problems ──────────────────────────────────────────────────
 export const BUILTIN_PROBLEMS: Problem[] = [
+  // ── Sliding Window ──────────────────────────────────────────────────────────
   { id: 'lc-3',   title: 'Longest Substring Without Repeating Characters', difficulty: 'Medium', patternId: 'sliding-window', description: '', examples: [], constraints: [], testCases: [{ input: '"abcabcbb"', expected: '3' }], companies: ['Amazon','Microsoft','Adobe'], leetcodeLink: 'https://leetcode.com/problems/longest-substring-without-repeating-characters/' },
   { id: 'lc-76',  title: 'Minimum Window Substring',                       difficulty: 'Hard',   patternId: 'sliding-window', description: '', examples: [], constraints: [], testCases: [], companies: ['Google','Facebook'], leetcodeLink: 'https://leetcode.com/problems/minimum-window-substring/' },
   { id: 'lc-567', title: 'Permutation in String',                          difficulty: 'Medium', patternId: 'sliding-window', description: '', examples: [], constraints: [], testCases: [], companies: ['Microsoft','Amazon'], leetcodeLink: 'https://leetcode.com/problems/permutation-in-string/' },
-  { id: 'lc-1',   title: 'Two Sum',                                        difficulty: 'Easy',   patternId: 'hashmap',        description: '', examples: [], constraints: [], testCases: [{ input: '[2,7,11,15], 9', expected: '[0,1]' }], companies: ['Google','Amazon','Meta'], leetcodeLink: 'https://leetcode.com/problems/two-sum/' },
+  // ── Two Pointers ────────────────────────────────────────────────────────────
   { id: 'lc-15',  title: 'Three Sum',                                      difficulty: 'Medium', patternId: 'two-pointers',   description: '', examples: [], constraints: [], testCases: [], companies: ['Amazon','Google'], leetcodeLink: 'https://leetcode.com/problems/3sum/' },
   { id: 'lc-42',  title: 'Trapping Rain Water',                            difficulty: 'Hard',   patternId: 'two-pointers',   description: '', examples: [], constraints: [], testCases: [], companies: ['Amazon','Google','Meta'], leetcodeLink: 'https://leetcode.com/problems/trapping-rain-water/' },
-  { id: 'lc-200', title: 'Number of Islands',                              difficulty: 'Medium', patternId: 'graph',          description: '', examples: [], constraints: [], testCases: [], companies: ['Amazon','Google','Microsoft'], leetcodeLink: 'https://leetcode.com/problems/number-of-islands/' },
-  { id: 'lc-322', title: 'Coin Change',                                    difficulty: 'Medium', patternId: 'dp',             description: '', examples: [], constraints: [], testCases: [], companies: ['Amazon','Google'], leetcodeLink: 'https://leetcode.com/problems/coin-change/' },
+  { id: 'lc-11',  title: 'Container With Most Water',                      difficulty: 'Medium', patternId: 'two-pointers',   description: '', examples: [], constraints: [], testCases: [], companies: ['Amazon','Google','Meta'], leetcodeLink: 'https://leetcode.com/problems/container-with-most-water/' },
+  // ── HashMap ─────────────────────────────────────────────────────────────────
+  { id: 'lc-1',   title: 'Two Sum',                                        difficulty: 'Easy',   patternId: 'hashmap',        description: '', examples: [], constraints: [], testCases: [{ input: '[2,7,11,15], 9', expected: '[0,1]' }], companies: ['Google','Amazon','Meta'], leetcodeLink: 'https://leetcode.com/problems/two-sum/' },
+  { id: 'lc-49',  title: 'Group Anagrams',                                 difficulty: 'Medium', patternId: 'hashmap',        description: '', examples: [], constraints: [], testCases: [], companies: ['Amazon','Facebook','Google'], leetcodeLink: 'https://leetcode.com/problems/group-anagrams/' },
+  { id: 'lc-128', title: 'Longest Consecutive Sequence',                   difficulty: 'Medium', patternId: 'hashmap',        description: '', examples: [], constraints: [], testCases: [], companies: ['Google','Amazon'], leetcodeLink: 'https://leetcode.com/problems/longest-consecutive-sequence/' },
+  // ── Binary Search ───────────────────────────────────────────────────────────
   { id: 'lc-704', title: 'Binary Search',                                  difficulty: 'Easy',   patternId: 'binary-search',  description: '', examples: [], constraints: [], testCases: [], companies: ['Google'], leetcodeLink: 'https://leetcode.com/problems/binary-search/' },
   { id: 'lc-33',  title: 'Search in Rotated Sorted Array',                 difficulty: 'Medium', patternId: 'binary-search',  description: '', examples: [], constraints: [], testCases: [], companies: ['Amazon','Microsoft','Facebook'], leetcodeLink: 'https://leetcode.com/problems/search-in-rotated-sorted-array/' },
+  { id: 'lc-153', title: 'Find Minimum in Rotated Sorted Array',           difficulty: 'Medium', patternId: 'binary-search',  description: '', examples: [], constraints: [], testCases: [], companies: ['Amazon','Microsoft'], leetcodeLink: 'https://leetcode.com/problems/find-minimum-in-rotated-sorted-array/' },
+  // ── Graph ───────────────────────────────────────────────────────────────────
+  { id: 'lc-200', title: 'Number of Islands',                              difficulty: 'Medium', patternId: 'graph',          description: '', examples: [], constraints: [], testCases: [], companies: ['Amazon','Google','Microsoft'], leetcodeLink: 'https://leetcode.com/problems/number-of-islands/' },
+  { id: 'lc-133', title: 'Clone Graph',                                    difficulty: 'Medium', patternId: 'graph',          description: '', examples: [], constraints: [], testCases: [], companies: ['Facebook','Amazon','Microsoft'], leetcodeLink: 'https://leetcode.com/problems/clone-graph/' },
+  { id: 'lc-417', title: 'Pacific Atlantic Water Flow',                    difficulty: 'Medium', patternId: 'graph',          description: '', examples: [], constraints: [], testCases: [], companies: ['Amazon','Google'], leetcodeLink: 'https://leetcode.com/problems/pacific-atlantic-water-flow/' },
+  // ── Dynamic Programming ─────────────────────────────────────────────────────
+  { id: 'lc-322', title: 'Coin Change',                                    difficulty: 'Medium', patternId: 'dp',             description: '', examples: [], constraints: [], testCases: [], companies: ['Amazon','Google'], leetcodeLink: 'https://leetcode.com/problems/coin-change/' },
+  { id: 'lc-1143',title: 'Longest Common Subsequence',                     difficulty: 'Medium', patternId: 'dp',             description: '', examples: [], constraints: [], testCases: [], companies: ['Amazon','Google','Microsoft'], leetcodeLink: 'https://leetcode.com/problems/longest-common-subsequence/' },
+  { id: 'lc-300', title: 'Longest Increasing Subsequence',                 difficulty: 'Medium', patternId: 'dp',             description: '', examples: [], constraints: [], testCases: [], companies: ['Microsoft','Amazon','Google'], leetcodeLink: 'https://leetcode.com/problems/longest-increasing-subsequence/' },
+  // ── Tree BFS ────────────────────────────────────────────────────────────────
+  { id: 'lc-102', title: 'Binary Tree Level Order Traversal',              difficulty: 'Medium', patternId: 'tree-bfs',       description: '', examples: [], constraints: [], testCases: [], companies: ['Amazon','Microsoft','Google'], leetcodeLink: 'https://leetcode.com/problems/binary-tree-level-order-traversal/' },
+  { id: 'lc-103', title: 'Binary Tree Zigzag Level Order Traversal',       difficulty: 'Medium', patternId: 'tree-bfs',       description: '', examples: [], constraints: [], testCases: [], companies: ['Amazon','Microsoft'], leetcodeLink: 'https://leetcode.com/problems/binary-tree-zigzag-level-order-traversal/' },
+  // ── Tree DFS ────────────────────────────────────────────────────────────────
+  { id: 'lc-112', title: 'Path Sum',                                       difficulty: 'Easy',   patternId: 'tree-dfs',       description: '', examples: [], constraints: [], testCases: [], companies: ['Amazon','Microsoft'], leetcodeLink: 'https://leetcode.com/problems/path-sum/' },
+  { id: 'lc-124', title: 'Binary Tree Maximum Path Sum',                   difficulty: 'Hard',   patternId: 'tree-dfs',       description: '', examples: [], constraints: [], testCases: [], companies: ['Amazon','Meta','Google'], leetcodeLink: 'https://leetcode.com/problems/binary-tree-maximum-path-sum/' },
+  // ── Fast & Slow Pointers ────────────────────────────────────────────────────
+  { id: 'lc-141', title: 'Linked List Cycle',                              difficulty: 'Easy',   patternId: 'fast-slow-pointers', description: '', examples: [], constraints: [], testCases: [], companies: ['Amazon','Microsoft'], leetcodeLink: 'https://leetcode.com/problems/linked-list-cycle/' },
+  { id: 'lc-142', title: 'Linked List Cycle II',                           difficulty: 'Medium', patternId: 'fast-slow-pointers', description: '', examples: [], constraints: [], testCases: [], companies: ['Amazon','Microsoft'], leetcodeLink: 'https://leetcode.com/problems/linked-list-cycle-ii/' },
+  // ── Backtracking ────────────────────────────────────────────────────────────
+  { id: 'lc-78',  title: 'Subsets',                                        difficulty: 'Medium', patternId: 'backtracking',   description: '', examples: [], constraints: [], testCases: [], companies: ['Amazon','Facebook','Google'], leetcodeLink: 'https://leetcode.com/problems/subsets/' },
+  { id: 'lc-46',  title: 'Permutations',                                   difficulty: 'Medium', patternId: 'backtracking',   description: '', examples: [], constraints: [], testCases: [], companies: ['Microsoft','Amazon'], leetcodeLink: 'https://leetcode.com/problems/permutations/' },
+  { id: 'lc-79',  title: 'Word Search',                                    difficulty: 'Medium', patternId: 'backtracking',   description: '', examples: [], constraints: [], testCases: [], companies: ['Amazon','Microsoft','Facebook'], leetcodeLink: 'https://leetcode.com/problems/word-search/' },
+  // ── Two Heaps ───────────────────────────────────────────────────────────────
+  { id: 'lc-295', title: 'Find Median from Data Stream',                   difficulty: 'Hard',   patternId: 'two-heaps',      description: '', examples: [], constraints: [], testCases: [], companies: ['Amazon','Google','Microsoft'], leetcodeLink: 'https://leetcode.com/problems/find-median-from-data-stream/' },
+  // ── Merge Intervals ─────────────────────────────────────────────────────────
+  { id: 'lc-56',  title: 'Merge Intervals',                                difficulty: 'Medium', patternId: 'merge-intervals', description: '', examples: [], constraints: [], testCases: [], companies: ['Amazon','Google','Facebook'], leetcodeLink: 'https://leetcode.com/problems/merge-intervals/' },
+  { id: 'lc-57',  title: 'Insert Interval',                                difficulty: 'Medium', patternId: 'merge-intervals', description: '', examples: [], constraints: [], testCases: [], companies: ['Google','LinkedIn'], leetcodeLink: 'https://leetcode.com/problems/insert-interval/' },
+  // ── Top K Elements ──────────────────────────────────────────────────────────
+  { id: 'lc-215', title: 'Kth Largest Element in an Array',                difficulty: 'Medium', patternId: 'top-k',          description: '', examples: [], constraints: [], testCases: [], companies: ['Facebook','Amazon','Microsoft'], leetcodeLink: 'https://leetcode.com/problems/kth-largest-element-in-an-array/' },
+  { id: 'lc-347', title: 'Top K Frequent Elements',                        difficulty: 'Medium', patternId: 'top-k',          description: '', examples: [], constraints: [], testCases: [], companies: ['Amazon','Facebook','Google'], leetcodeLink: 'https://leetcode.com/problems/top-k-frequent-elements/' },
+  // ── Monotonic Stack ─────────────────────────────────────────────────────────
+  { id: 'lc-739', title: 'Daily Temperatures',                             difficulty: 'Medium', patternId: 'monotonic-stack', description: '', examples: [], constraints: [], testCases: [], companies: ['Amazon','Google'], leetcodeLink: 'https://leetcode.com/problems/daily-temperatures/' },
+  { id: 'lc-84',  title: 'Largest Rectangle in Histogram',                 difficulty: 'Hard',   patternId: 'monotonic-stack', description: '', examples: [], constraints: [], testCases: [], companies: ['Amazon','Google','Microsoft'], leetcodeLink: 'https://leetcode.com/problems/largest-rectangle-in-histogram/' },
+  // ── Prefix Sum ──────────────────────────────────────────────────────────────
+  { id: 'lc-560', title: 'Subarray Sum Equals K',                          difficulty: 'Medium', patternId: 'prefix-sum',     description: '', examples: [], constraints: [], testCases: [], companies: ['Facebook','Amazon','Google'], leetcodeLink: 'https://leetcode.com/problems/subarray-sum-equals-k/' },
+  { id: 'lc-238', title: 'Product of Array Except Self',                   difficulty: 'Medium', patternId: 'prefix-sum',     description: '', examples: [], constraints: [], testCases: [], companies: ['Amazon','Facebook','Microsoft'], leetcodeLink: 'https://leetcode.com/problems/product-of-array-except-self/' },
+  // ── Greedy ──────────────────────────────────────────────────────────────────
+  { id: 'lc-55',  title: 'Jump Game',                                      difficulty: 'Medium', patternId: 'greedy',         description: '', examples: [], constraints: [], testCases: [], companies: ['Amazon','Microsoft'], leetcodeLink: 'https://leetcode.com/problems/jump-game/' },
+  { id: 'lc-45',  title: 'Jump Game II',                                   difficulty: 'Medium', patternId: 'greedy',         description: '', examples: [], constraints: [], testCases: [], companies: ['Amazon','Google'], leetcodeLink: 'https://leetcode.com/problems/jump-game-ii/' },
+  // ── Bitwise ─────────────────────────────────────────────────────────────────
+  { id: 'lc-136', title: 'Single Number',                                  difficulty: 'Easy',   patternId: 'bitwise',        description: '', examples: [], constraints: [], testCases: [], companies: ['Amazon','Adobe'], leetcodeLink: 'https://leetcode.com/problems/single-number/' },
+  { id: 'lc-191', title: 'Number of 1 Bits',                               difficulty: 'Easy',   patternId: 'bitwise',        description: '', examples: [], constraints: [], testCases: [], companies: ['Microsoft','Apple'], leetcodeLink: 'https://leetcode.com/problems/number-of-1-bits/' },
+  // ── K-way Merge ─────────────────────────────────────────────────────────────
+  { id: 'lc-23',  title: 'Merge K Sorted Lists',                           difficulty: 'Hard',   patternId: 'k-way-merge',    description: '', examples: [], constraints: [], testCases: [], companies: ['Amazon','Google','Microsoft'], leetcodeLink: 'https://leetcode.com/problems/merge-k-sorted-lists/' },
+  // ── In-place Reversal of LinkedList ─────────────────────────────────────────
+  { id: 'lc-206', title: 'Reverse Linked List',                            difficulty: 'Easy',   patternId: 'reversal-ll',    description: '', examples: [], constraints: [], testCases: [], companies: ['Amazon','Adobe','Microsoft'], leetcodeLink: 'https://leetcode.com/problems/reverse-linked-list/' },
+  { id: 'lc-92',  title: 'Reverse Linked List II',                         difficulty: 'Medium', patternId: 'reversal-ll',    description: '', examples: [], constraints: [], testCases: [], companies: ['Amazon','Microsoft'], leetcodeLink: 'https://leetcode.com/problems/reverse-linked-list-ii/' },
+  // ── Cyclic Sort ─────────────────────────────────────────────────────────────
+  { id: 'lc-268', title: 'Missing Number',                                 difficulty: 'Easy',   patternId: 'cyclic-sort',    description: '', examples: [], constraints: [], testCases: [], companies: ['Microsoft','Amazon'], leetcodeLink: 'https://leetcode.com/problems/missing-number/' },
+  { id: 'lc-41',  title: 'First Missing Positive',                         difficulty: 'Hard',   patternId: 'cyclic-sort',    description: '', examples: [], constraints: [], testCases: [], companies: ['Amazon','Google'], leetcodeLink: 'https://leetcode.com/problems/first-missing-positive/' },
 ];
+
 
 const COLORS = ['#06b6d4','#8b5cf6','#ec4899','#f59e0b','#10b981','#3b82f6','#f97316','#a855f7','#22c55e','#ef4444'];
 
@@ -790,6 +846,7 @@ export default function DSAPatterns() {
               companies: p.companyTags ?? [],
               leetcodeLink: p.leetcodeUrl,
               tags: p.topicTags ?? [],
+              metaData: p.metaData,
               addedAt: new Date().toISOString(),
             });
           }}
