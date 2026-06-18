@@ -633,7 +633,7 @@ export default function ProblemDetail() {
 
             {/* TC/SC Analysis */}
             {leftPanel === 'analysis' && (
-              <div className="pd-history tcsc-analysis-panel" style={{ background: '#000', borderRadius: '8px', padding: '16px', border: '1px solid var(--border)', height: '100%', display: 'flex', flexDirection: 'column' }}>
+              <div className="pd-history tcsc-analysis-panel" style={{ background: 'var(--surface2)', borderRadius: '8px', padding: '16px', border: '1px solid var(--border)', height: '100%', display: 'flex', flexDirection: 'column' }}>
                 <h2>Complexity Analysis</h2>
                 {!results ? (
                   <p className="empty-state">Run your code first to analyze complexity.</p>

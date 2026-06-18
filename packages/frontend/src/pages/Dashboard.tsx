@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Flame, Code2, ChevronRight, RotateCcw, Target, Settings } from 'lucide-react';
+import { Flame, Code2, ChevronRight, RotateCcw, Settings } from 'lucide-react';
 import CheatsheetSlideshow from '../components/CheatsheetSlideshow';
 import { useAuthStore } from '../store/useAuthStore';
 import { useAppStore } from '../store/useAppStore';
@@ -64,7 +64,6 @@ export default function Dashboard() {
   const solvedCount = Object.keys(solvedProblems).length;
   const solvedThisWeek = Object.values(solvedProblems).filter(p => new Date(p.solvedAt) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)).length;
   const solvedToday = Object.values(solvedProblems).filter(p => new Date(p.solvedAt) > new Date(new Date().setHours(0,0,0,0))).length;
-  const readiness = Math.min(100, Math.floor((solvedCount / 150) * 100));
 
   const heatmapData = Array.from({ length: 52 * 7 }, (_, i) => {
     const date = new Date();
@@ -84,7 +83,6 @@ export default function Dashboard() {
   const statCards = [
     { label: 'Problems Solved', value: `${solvedCount}`, sub: `${solvedThisWeek} this week`, icon: Code2, color: 'var(--primary)' },
     { label: 'Current Streak', value: `${user?.currentStreak ?? 1} days`, sub: 'Keep it up!', icon: Flame, color: '#f97316' },
-    { label: 'Readiness Score', value: `${readiness}%`, sub: 'Solve more problems', icon: Target, color: 'var(--success)' },
   ];
 
   const toggleWidget = (id: string) => {

@@ -10,7 +10,8 @@
 .mj-type-card:hover { border-color: var(--primary); }
 .mj-type-card.active { border-color: var(--primary); background: var(--primary-dim); }
 .mtc-count { display: block; font-size: 22px; font-weight: 800; }
-.mtc-label { display: block; font-size: 10px; color: var(--text-dim); margin-top: 2px; line-height: 1.3; }
+.mtc-label { display: block; font-size: 10px; font-weight: 700; color: var(--text-dim); margin-top: 2px; line-height: 1.3; }
+.mtc-desc { display: block; font-size: 10px; color: var(--text-faint); margin-top: 5px; line-height: 1.4; text-align: left; }
 
 .mj-filter-row { display: flex; gap: 4px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 3px; width: fit-content; }
 .filter-tab { padding: 5px 16px; border-radius: 6px; font-size: 12px; font-weight: 500; color: var(--text-dim); background: none; border: none; cursor: pointer; }
