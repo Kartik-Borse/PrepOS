@@ -23,7 +23,7 @@ const STARTER: Record<string, Record<string, string>> = {
 const DEFAULT_STARTER = (lang: string) =>
   ({ python: `# Write your solution here\ndef solution():\n    pass`, javascript: `// Write your solution here\nfunction solution() {\n\n}`, cpp: `// Write your solution here\n#include <bits/stdc++.h>\nusing namespace std;\n\nint main() {\n    return 0;\n}`, java: `// Write your solution here\nclass Solution {\n    public static void main(String[] args) {\n    }\n}` }[lang] ?? '');
 
-// ── Simulated execution engine ───────────────────────────────────────────────
+// ── Real JDoodle execution engine ────────────────────────────────────────────
 interface TestResult {
   passed: boolean;
   input: string;
@@ -35,27 +35,58 @@ interface TestResult {
   steps?: string[];
 }
 
-function runCode(code: string, _lang: string, testCases: { input: string; expected: string }[]): TestResult[] {
-  return testCases.map((tc, i) => {
-    const steps = [
-      `Step 1: Initialize window pointers left=0, right=0`,
-      `Step 2: Expand right pointer, add char to HashMap`,
-      `Step 3: Shrink window when duplicate found`,
-      `Step 4: Track max window size`,
-      `Step 5: Return max length = ${tc.expected}`,
-    ];
-    const pass = code.trim().length > 30 && !code.includes('pass') && !code.includes('// Your solution');
-    return {
-      passed: pass,
-      input: tc.input,
-      expected: tc.expected,
-      actual: pass ? tc.expected : i === 0 ? '2' : tc.expected,
-      runtimeMs: Math.floor(Math.random() * 60) + 20,
-      memoryKB: Math.floor(Math.random() * 4000) + 14000,
-      error: !pass && code.trim().length < 10 ? 'No code written' : undefined,
-      steps,
-    };
-  });
+const LANG_MAP: Record<string, { language: string; versionIndex: string }> = {
+  python:     { language: 'python3',   versionIndex: '3' },
+  javascript: { language: 'nodejs',    versionIndex: '4' },
+  java:       { language: 'java',      versionIndex: '4' },
+  cpp:        { language: 'cpp17',     versionIndex: '1' },
+};
+
+async function runCodeReal(
+  code: string,
+  lang: string,
+  testCases: { input: string; expected: string }[]
+): Promise<TestResult[]> {
+  const { language, versionIndex } = LANG_MAP[lang] ?? LANG_MAP['javascript'];
+  const results: TestResult[] = [];
+
+  for (const tc of testCases) {
+    const start = Date.now();
+    try {
+      const resp = await fetch('/api/code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ script: code, language, versionIndex, stdin: tc.input }),
+      });
+      const data = await resp.json();
+      const runtimeMs = Date.now() - start;
+      const actual = (data.output ?? '').trim();
+      const expected = tc.expected.trim();
+      const passed = actual === expected;
+      results.push({
+        passed,
+        input: tc.input,
+        expected,
+        actual: data.error ? `Error: ${data.error}` : actual,
+        runtimeMs,
+        memoryKB: parseInt(data.memory ?? '0', 10),
+        error: data.error,
+        steps: [`Output: ${actual}`, `Expected: ${expected}`, passed ? '✓ Match' : '✗ Mismatch'],
+      });
+    } catch (e: any) {
+      results.push({
+        passed: false,
+        input: tc.input,
+        expected: tc.expected,
+        actual: '',
+        runtimeMs: Date.now() - start,
+        memoryKB: 0,
+        error: e.message,
+        steps: [`Error: ${e.message}`],
+      });
+    }
+  }
+  return results;
 }
 
 // ── Hints ────────────────────────────────────────────────────────────────────
@@ -207,23 +238,23 @@ export default function ProblemDetail() {
     setCode(STARTER[id]?.[l] ?? DEFAULT_STARTER(l));
   };
 
-  const handleRun = useCallback(() => {
+  const handleRun = useCallback(async () => {
     setRunning(true);
     setRightPanel('result');
-    setTimeout(() => {
-      const res = runCode(code, lang, problem.testCases);
+    try {
+      const res = await runCodeReal(code, lang, problem.testCases);
       setResults(res);
+    } finally {
       setRunning(false);
-    }, 1500);
-  }, [code, lang]);
+    }
+  }, [code, lang, problem.testCases]);
 
-  const handleSubmit = useCallback(() => {
+  const handleSubmit = useCallback(async () => {
     setRunning(true);
     setRightPanel('result');
-    setTimeout(() => {
-    const res = runCode(code, lang, problem.testCases);
+    try {
+      const res = await runCodeReal(code, lang, problem.testCases);
       setResults(res);
-      setRunning(false);
       const allPass = res.every((r) => r.passed);
       addAttempt({
         id: crypto.randomUUID(),
@@ -244,8 +275,10 @@ export default function ProblemDetail() {
         }
         markSolved(id, 'solved', revisionDate || new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString());
       }
-    }, 1500);
-  }, [code, lang, elapsed, id, hintLevel, addAttempt, markSolved, revisionDate, solvedProblems, user, updateUser]);
+    } finally {
+      setRunning(false);
+    }
+  }, [code, lang, elapsed, id, hintLevel, addAttempt, markSolved, revisionDate, solvedProblems, user, updateUser, problem.testCases]);
 
   const saveNote = () => {
     setProblemNote(id, noteText);
