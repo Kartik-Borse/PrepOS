@@ -2,7 +2,8 @@ import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Code2, BookOpen, Cpu,
   MessageSquare, BarChart2, Trophy, Bookmark,
-  CalendarDays, Settings, Timer, FileEdit, Brain, Braces, Building2, LogOut, Gauge
+  CalendarDays, Settings, Timer, FileEdit, Brain, Braces, Building2, LogOut, Gauge,
+  FileText, Users, AlertCircle, Download
 } from 'lucide-react';
 import { useAuthStore } from '../store/useAuthStore';
 import './Layout.css';

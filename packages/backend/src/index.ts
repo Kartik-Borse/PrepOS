@@ -19,8 +19,13 @@ const limiter = rateLimit({
   legacyHeaders: false,
 });
 app.use('/api/code', limiter);
-
 app.use('/api/code', codeRunnerRouter);
 
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Backend listening on ${PORT}`));
+// Start server only when run directly (not when imported by Vercel)
+if (process.env.NODE_ENV !== 'production') {
+  const PORT = process.env.PORT || 5000;
+  app.listen(PORT, () => console.log(`Backend listening on ${PORT}`));
+}
+
+// Default export for Vercel serverless (api/index.ts imports this)
+export default app;

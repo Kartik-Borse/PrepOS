@@ -1,25 +1,14 @@
-// vercel.json - configuration for deploying frontend and backend on Vercel
 {
-  "rewrites": [
-    { "source": "/api/(.*)", "destination": "/api/$1" }
-  ],
+  "version": 2,
+  "buildCommand": "npm run build --workspace=frontend",
+  "outputDirectory": "packages/frontend/dist",
   "env": {
     "JDOODLE_CLIENT_ID": "b8d0b1ab44ad7837a4659802e477df3e",
     "JDOODLE_CLIENT_SECRET": "76960ac70587c86243ec74b23d4332b41dd5df83b144e0ae260815ed2864536c"
   },
-  "functions": {
-    "api/**/*.js": { "runtime": "nodejs18.x" }
-  },
-  "builds": [
-    {
-      "src": "packages/frontend/package.json",
-      "use": "@vercel/static-build",
-      "config": { "distDir": "dist" }
-    },
-    {
-      "src": "packages/backend/src/index.ts",
-      "use": "@vercel/node",
-      "config": { "maxLambdaSize": "50mb" }
-    }
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": "/api/$1" },
+    { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
+
