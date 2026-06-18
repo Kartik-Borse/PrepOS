@@ -26,7 +26,7 @@ const companies = [
 ];
 
 export default function Analytics() {
-  const { solvedProblems, attempts } = useAppStore();
+  const { solvedProblems } = useAppStore();
   const user = useAuthStore(s => s.user);
   
   const solvedCount = Object.keys(solvedProblems).length;

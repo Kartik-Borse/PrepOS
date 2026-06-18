@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Flame, Code2, ChevronRight, RotateCcw, Target, TrendingUp, Settings } from 'lucide-react';
 import CheatsheetSlideshow from '../components/CheatsheetSlideshow';
