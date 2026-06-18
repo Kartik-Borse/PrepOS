@@ -8,8 +8,7 @@ import Aptitude from './pages/Aptitude';
 import CoreCS from './pages/CoreCS';
 import AIInterview from './pages/AIInterview';
 import Analytics from './pages/Analytics';
-import Leaderboard from './pages/Leaderboard';
-import Bookmarks from './pages/Bookmarks';
+import Lists from './pages/Lists';
 import StudyPlan from './pages/StudyPlan';
 import Settings from './pages/Settings';
 import Notes from './pages/Notes';
@@ -21,7 +20,6 @@ import ResumeBuilder from './pages/ResumeBuilder';
 import ConceptCards from './pages/ConceptCards';
 import CodeSnippets from './pages/CodeSnippets';
 import CompanyPrepKits from './pages/CompanyPrepKits';
-import TCSCAnalysis from './pages/TCSCAnalysis';
 import Login from './pages/Login';
 
 export default function App() {
@@ -39,8 +37,7 @@ export default function App() {
         <Route path="/concept-cards" element={<ConceptCards />} />
         <Route path="/ai-interview" element={<AIInterview />} />
         <Route path="/analytics" element={<Analytics />} />
-        <Route path="/leaderboard" element={<Leaderboard />} />
-        <Route path="/bookmarks" element={<Bookmarks />} />
+        <Route path="/lists" element={<Lists />} />
         <Route path="/study-plan" element={<StudyPlan />} />
         <Route path="/notes" element={<Notes />} />
         <Route path="/hr-questions" element={<HRQuestions />} />
@@ -50,7 +47,6 @@ export default function App() {
         <Route path="/resume" element={<ResumeBuilder />} />
         <Route path="/snippets" element={<CodeSnippets />} />
         <Route path="/company-prep" element={<CompanyPrepKits />} />
-        <Route path="/tc-sc-analysis" element={<TCSCAnalysis />} />
         <Route path="/settings" element={<Settings />} />
       </Route>
     </Routes>

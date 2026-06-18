@@ -18,8 +18,8 @@ const SAFETY = [
   { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE },
 ];
 
-// Use flash-lite first, fall back to 1.5-flash on quota issues
-const MODELS = ['gemini-1.5-flash-8b', 'gemini-1.5-flash', 'gemini-1.0-pro'];
+// Use flash (stable, available on free tier) first, fall back to 1.0-pro
+const MODELS = ['gemini-1.5-flash', 'gemini-1.0-pro'];
 
 async function withFallback<T>(fn: (model: string) => Promise<T>): Promise<T> {
   let lastErr: any;

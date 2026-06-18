@@ -134,6 +134,15 @@ export interface CustomPattern {
   createdAt: string;
 }
 
+export interface ProblemList {
+  id: string;
+  name: string;
+  description: string;
+  color: string;
+  createdAt: string;
+  items: { problemId: string; problemTitle: string; addedAt: string }[];
+}
+
 export interface DashboardConfig {
   widgetOrder: string[];
   hiddenWidgets: string[];
@@ -257,6 +266,14 @@ interface AppState {
   solvedProblems: Record<string, { status: 'solved' | 'revision'; solvedAt: string; nextRevisionAt?: string }>;
   markSolved: (problemId: string, status: 'solved' | 'revision', nextRevisionAt?: string) => void;
 
+  // User-created problem lists
+  problemLists: ProblemList[];
+  addList: (list: ProblemList) => void;
+  deleteList: (id: string) => void;
+  renameList: (id: string, name: string) => void;
+  addProblemToList: (listId: string, problemId: string, problemTitle: string) => void;
+  removeProblemFromList: (listId: string, problemId: string) => void;
+
   // Cache for auto-fetched LC data (built-in problems)
   lcCache: Record<string, { description: string; codeSnippets: any[] }>;
   updateProblemMetaData: (id: string, metaData: any, description: string) => void;
@@ -377,6 +394,22 @@ export const useAppStore = create<AppState>()(
       solvedProblems: {},
       markSolved: (problemId, status, nextRevisionAt) =>
         set((s) => ({ solvedProblems: { ...s.solvedProblems, [problemId]: { status, solvedAt: new Date().toISOString(), nextRevisionAt } } })),
+
+      problemLists: [],
+      addList: (list) => set((s) => ({ problemLists: [...s.problemLists, list] })),
+      deleteList: (id) => set((s) => ({ problemLists: s.problemLists.filter((l) => l.id !== id) })),
+      renameList: (id, name) => set((s) => ({ problemLists: s.problemLists.map((l) => l.id === id ? { ...l, name } : l) })),
+      addProblemToList: (listId, problemId, problemTitle) => set((s) => ({
+        problemLists: s.problemLists.map((l) =>
+          l.id !== listId || l.items.some(i => i.problemId === problemId) ? l :
+          { ...l, items: [...l.items, { problemId, problemTitle, addedAt: new Date().toISOString() }] }
+        ),
+      })),
+      removeProblemFromList: (listId, problemId) => set((s) => ({
+        problemLists: s.problemLists.map((l) =>
+          l.id !== listId ? l : { ...l, items: l.items.filter(i => i.problemId !== problemId) }
+        ),
+      })),
     }),
     { name: 'prepos-storage' }
   )

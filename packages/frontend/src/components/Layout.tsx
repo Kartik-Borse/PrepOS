@@ -1,37 +1,34 @@
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Code2, BookOpen, Cpu,
-  MessageSquare, BarChart2, Trophy, Bookmark,
-  CalendarDays, Settings, Timer, FileEdit, Brain, Braces, Building2, LogOut, Gauge,
-  FileText, Users, AlertCircle, Download
+  MessageSquare, BarChart2,
+  CalendarDays, Settings, Timer, FileEdit, Brain, Braces, Building2, LogOut,
+  FileText, Users, AlertCircle, List
 } from 'lucide-react';
 import { useAuthStore } from '../store/useAuthStore';
 import './Layout.css';
 
 const navItems = [
-  { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-  { to: '/dsa', icon: Code2, label: 'DSA Patterns' },
-  { to: '/aptitude', icon: BookOpen, label: 'Aptitude' },
-  { to: '/core-cs', icon: Cpu, label: 'Core CS' },
-  { to: '/concept-cards', icon: Brain, label: 'Concept Cards' },
-  { to: '/ai-interview', icon: MessageSquare, label: 'AI Interview' },
-  { to: '/mock-contest', icon: Timer, label: 'Mock Contest' },
-  { to: '/company-prep', icon: Building2, label: 'Company Kits' },
-  { to: '/analytics', icon: BarChart2, label: 'Analytics' },
-  { to: '/leaderboard', icon: Trophy, label: 'Leaderboard' },
+  { to: '/dashboard',    icon: LayoutDashboard, label: 'Dashboard' },
+  { to: '/dsa',          icon: Code2,           label: 'DSA Patterns' },
+  { to: '/aptitude',     icon: BookOpen,        label: 'Aptitude' },
+  { to: '/core-cs',      icon: Cpu,             label: 'Core CS' },
+  { to: '/ai-interview', icon: MessageSquare,   label: 'AI Interview' },
+  { to: '/mock-contest', icon: Timer,           label: 'Mock Contest' },
+  { to: '/company-prep', icon: Building2,       label: 'Company Kits' },
+  { to: '/analytics',    icon: BarChart2,       label: 'Analytics' },
 ];
 
 const bottomItems = [
-  { to: '/notes', icon: FileText, label: 'Notes' },
-  { to: '/snippets', icon: Braces, label: 'Snippets' },
-  { to: '/tc-sc-analysis', icon: Gauge, label: 'TC/SC Analysis' },
-  { to: '/resume', icon: FileEdit, label: 'Resume' },
-  { to: '/hr-questions', icon: Users, label: 'HR Questions' },
-  { to: '/mistakes', icon: AlertCircle, label: 'Mistakes' },
-  { to: '/progress', icon: Download, label: 'Export' },
-  { to: '/bookmarks', icon: Bookmark, label: 'Bookmarked' },
-  { to: '/study-plan', icon: CalendarDays, label: 'Study Plan' },
-  { to: '/settings', icon: Settings, label: 'Settings' },
+  { to: '/snippets',      icon: Braces,       label: 'Snippets' },
+  { to: '/concept-cards', icon: Brain,        label: 'Concept Cards' },
+  { to: '/hr-questions',  icon: Users,        label: 'HR Questions' },
+  { to: '/mistakes',      icon: AlertCircle,  label: 'Mistakes' },
+  { to: '/notes',         icon: FileText,     label: 'Notes' },
+  { to: '/resume',        icon: FileEdit,     label: 'Resume' },
+  { to: '/lists',         icon: List,         label: 'Lists' },
+  { to: '/study-plan',    icon: CalendarDays, label: 'Study Plan' },
+  { to: '/settings',      icon: Settings,     label: 'Settings' },
 ];
 
 export default function Layout() {
