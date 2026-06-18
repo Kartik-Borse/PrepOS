@@ -21,6 +21,7 @@ import ResumeBuilder from './pages/ResumeBuilder';
 import ConceptCards from './pages/ConceptCards';
 import CodeSnippets from './pages/CodeSnippets';
 import CompanyPrepKits from './pages/CompanyPrepKits';
+import TCSCAnalysis from './pages/TCSCAnalysis';
 import Login from './pages/Login';
 
 export default function App() {
@@ -49,6 +50,7 @@ export default function App() {
         <Route path="/resume" element={<ResumeBuilder />} />
         <Route path="/snippets" element={<CodeSnippets />} />
         <Route path="/company-prep" element={<CompanyPrepKits />} />
+        <Route path="/tc-sc-analysis" element={<TCSCAnalysis />} />
         <Route path="/settings" element={<Settings />} />
       </Route>
     </Routes>
