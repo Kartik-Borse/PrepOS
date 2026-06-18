@@ -18,8 +18,27 @@ const SAFETY = [
   { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE },
 ];
 
-// Use flash (stable, available on free tier) first, fall back to 1.0-pro
-const MODELS = ['gemini-1.5-flash', 'gemini-1.0-pro'];
+/**
+ * Model priority list — from docs.google.dev (June 2025):
+ *   gemini-2.5-flash  → stable, free tier, best price-performance
+ *   gemini-2.5-flash-lite → stable, fastest/cheapest in 2.5 family
+ *   gemini-1.5-flash  → stable fallback (still available)
+ *
+ * Retries on: 429 quota, 500 server error, 404 model-not-found (skip to next)
+ */
+const MODELS = ['gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-1.5-flash'];
+
+function isRetryable(msg: string): boolean {
+  return (
+    msg.includes('429') ||
+    msg.includes('quota') ||
+    msg.includes('RESOURCE_EXHAUSTED') ||
+    msg.includes('500') ||
+    msg.includes('503') ||
+    msg.includes('not found') ||   // 404 model not available
+    msg.includes('404')
+  );
+}
 
 async function withFallback<T>(fn: (model: string) => Promise<T>): Promise<T> {
   let lastErr: any;
@@ -28,12 +47,11 @@ async function withFallback<T>(fn: (model: string) => Promise<T>): Promise<T> {
       return await fn(model);
     } catch (err: any) {
       lastErr = err;
-      const msg: string = err?.message ?? '';
-      // Only retry on quota/rate-limit errors
-      if (msg.includes('429') || msg.includes('quota') || msg.includes('RESOURCE_EXHAUSTED')) {
-        continue;
+      const msg: string = (err?.message ?? '').toLowerCase();
+      if (isRetryable(msg)) {
+        continue; // try next model
       }
-      throw err; // non-quota error — propagate immediately
+      throw err; // non-retryable error (bad API key, auth, etc) — propagate
     }
   }
   throw lastErr;

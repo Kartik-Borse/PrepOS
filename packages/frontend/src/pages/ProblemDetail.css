@@ -267,3 +267,48 @@
   text-align: center; font-size: 13px; font-weight: 600;
   color: var(--text-faint); padding: 4px 0;
 }
+
+/* ── Save to List dropdown ── */
+.pd-list-wrap { position: relative; }
+
+.pd-list-menu {
+  position: absolute; top: calc(100% + 6px); right: 0;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 10px; min-width: 200px; z-index: 200;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+  display: flex; flex-direction: column; overflow: hidden;
+}
+
+.pd-list-menu-header {
+  display: flex; align-items: center; gap: 7px;
+  padding: 10px 14px 8px;
+  font-size: 11px; font-weight: 700; color: var(--text-faint);
+  text-transform: uppercase; letter-spacing: 0.05em;
+  border-bottom: 1px solid var(--border);
+}
+
+.pd-list-menu-empty {
+  padding: 12px 14px; font-size: 12px; color: var(--text-dim);
+}
+.pd-list-menu-empty a { color: var(--primary); }
+
+.pd-list-menu-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 14px; background: none; border: none;
+  text-align: left; cursor: pointer; font-size: 13px; color: var(--text);
+  transition: background 0.1s; width: 100%;
+}
+.pd-list-menu-item:hover { background: var(--surface2); }
+.pd-list-menu-item.saved { color: var(--text-dim); }
+
+.pd-lmi-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+.pd-lmi-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pd-lmi-check { font-size: 11px; color: var(--success); font-weight: 700; }
+
+.pd-list-menu-manage {
+  display: block; padding: 9px 14px;
+  font-size: 12px; color: var(--primary);
+  border-top: 1px solid var(--border);
+  text-decoration: none;
+}
+.pd-list-menu-manage:hover { background: var(--surface2); }

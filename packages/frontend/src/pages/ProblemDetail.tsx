@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import {
-  Play, Send, ChevronDown, Star, Lightbulb, Maximize2,
+  Play, Send, ChevronDown, Lightbulb, Maximize2,
   CheckCircle2, XCircle, Clock,
-  ChevronLeft, ChevronRight as ChevronR
+  ChevronLeft, ChevronRight as ChevronR, BookmarkPlus, List
 } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 import { useAuthStore } from '../store/useAuthStore';
@@ -285,7 +285,6 @@ export default function ProblemDetail() {
   const [hintLevel, setHintLevel] = useState(0);
   const [running, setRunning] = useState(false);
   const [results, setResults] = useState<TestResult[] | null>(null);
-  const [bookmarked, setBookmarked] = useState(false);
   const [timerOn, setTimerOn] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const [selectedTest, setSelectedTest] = useState(0);
@@ -294,8 +293,17 @@ export default function ProblemDetail() {
   const [noteText, setNoteText] = useState('');
   const [noteSaved, setNoteSaved] = useState(false);
   const timerRef = useRef<ReturnType<typeof setInterval>>();
-  const { setProblemNote, problemNotes, addAttempt, updateAttempt, attempts, markSolved, solvedProblems, updateProblemMetaData } = useAppStore();
+  const { setProblemNote, problemNotes, addAttempt, updateAttempt, attempts, markSolved, solvedProblems, updateProblemMetaData, problemLists, addProblemToList } = useAppStore();
   const { user, updateUser } = useAuthStore();
+  const [showListMenu, setShowListMenu] = useState(false);
+
+  // Close list menu on outside click
+  useEffect(() => {
+    if (!showListMenu) return;
+    const handler = () => setShowListMenu(false);
+    window.addEventListener('click', handler);
+    return () => window.removeEventListener('click', handler);
+  }, [showListMenu]);
 
   const existingNote = problemNotes.find((n) => n.problemId === id);
   const myAttempts = attempts.filter((a) => a.problemId === id);
@@ -428,9 +436,52 @@ export default function ProblemDetail() {
           <a href={problem.leetcodeLink ?? SAMPLE_PROBLEM.leetcodeLink} target="_blank" rel="noreferrer" className="lc-link" title="View on LeetCode">
             <span>LC</span>
           </a>
-          <button className={`pd-icon-btn ${bookmarked ? 'active' : ''}`} onClick={() => setBookmarked(!bookmarked)} aria-label="Bookmark">
-            <Star size={15} fill={bookmarked ? 'var(--primary)' : 'none'} />
-          </button>
+
+          {/* Save to List dropdown */}
+          <div className="pd-list-wrap" style={{ position: 'relative' }}>
+            <button
+              className={`pd-icon-btn ${problemLists.some(l => l.items.some(i => i.problemId === id)) ? 'active' : ''}`}
+              onClick={() => setShowListMenu(v => !v)}
+              title="Save to List"
+              aria-label="Save to list"
+            >
+              <BookmarkPlus size={15} />
+            </button>
+            {showListMenu && (
+              <div className="pd-list-menu" onClick={e => e.stopPropagation()}>
+                <div className="pd-list-menu-header">
+                  <List size={13} /> Save to List
+                </div>
+                {problemLists.length === 0 ? (
+                  <div className="pd-list-menu-empty">
+                    No lists yet. <Link to="/lists" onClick={() => setShowListMenu(false)}>Create one ↗</Link>
+                  </div>
+                ) : (
+                  problemLists.map(l => {
+                    const saved = l.items.some(i => i.problemId === id);
+                    return (
+                      <button
+                        key={l.id}
+                        className={`pd-list-menu-item ${saved ? 'saved' : ''}`}
+                        onClick={() => {
+                          if (!saved) addProblemToList(l.id, id, problem.title);
+                          setShowListMenu(false);
+                        }}
+                      >
+                        <span className="pd-lmi-dot" style={{ background: l.color }} />
+                        <span className="pd-lmi-name">{l.name}</span>
+                        {saved && <span className="pd-lmi-check">✓</span>}
+                      </button>
+                    );
+                  })
+                )}
+                <Link to="/lists" className="pd-list-menu-manage" onClick={() => setShowListMenu(false)}>
+                  Manage Lists ↗
+                </Link>
+              </div>
+            )}
+          </div>
+
           <button className="pd-icon-btn" aria-label="Full screen"><Maximize2 size={15} /></button>
         </div>
       </div>
