@@ -8,6 +8,7 @@ import {
 import { useAppStore } from '../store/useAppStore';
 import { useAuthStore } from '../store/useAuthStore';
 import { BUILTIN_PROBLEMS } from './DSAPatterns';
+import { api } from '../lib/api';
 import DSAVisualizer from '../components/DSAVisualizer';
 import './ProblemDetail.css';
 
@@ -75,13 +76,14 @@ public:
   },
 };
 
+// Shown only while LeetCode data is being fetched
 const DEFAULT_STARTER = (lang: string) =>
   ({
-    python: `class Solution:\n    def solve(self, *args):\n        # your logic here\n        pass`,
-    javascript: `class Solution {\n    solve(...args) {\n        // your logic here\n    }\n}`,
-    cpp: `class Solution {\npublic:\n    void solve() {\n        // your logic here\n    }\n};`,
-    java: `class Solution {\n    public void solve() {\n        // your logic here\n    }\n}`,
-  }[lang] ?? '');
+    python: `# Fetching from LeetCode...\nclass Solution:\n    pass`,
+    javascript: `// Fetching from LeetCode...\nclass Solution {}`,
+    cpp: `// Fetching from LeetCode...\nclass Solution {};`,
+    java: `// Fetching from LeetCode...\nclass Solution {}`,
+  }[lang] ?? '// Fetching from LeetCode...');
 
 // ── Real JDoodle execution engine ────────────────────────────────────────────
 interface TestResult {
@@ -242,33 +244,42 @@ const APPROACHES = [
 
 export default function ProblemDetail() {
   const { id = 'longest-substring' } = useParams();
-  const problem = useAppStore(s => {
+  const foundProblem = useAppStore(s => {
     const custom = s.customProblems.find(p => String(p.id) === String(id));
-    if (custom) return custom;
-    // fallback to built-in problems list
-    return BUILTIN_PROBLEMS.find(p => String(p.id) === String(id)) || null;
-  }) || {
-    // default placeholder if not found
+    const builtin = BUILTIN_PROBLEMS.find(p => String(p.id) === String(id));
+    return custom ?? builtin ?? null;
+  });
+  const lcCacheEntry = useAppStore(s => s.lcCache[id] ?? null);
+
+  const problem = (foundProblem ?? {
     id: SAMPLE_PROBLEM.id,
     title: SAMPLE_PROBLEM.title,
     description: SAMPLE_PROBLEM.description,
     testCases: SAMPLE_PROBLEM.testCases,
     patternId: SAMPLE_PROBLEM.pattern,
-  };
+  }) as any;
+
   const [lang, setLang] = useState<Lang>('java');
-  
-  const getSnippet = useCallback((l: string, p: any) => {
-    if (p.metaData?.codeSnippets) {
-      // LeetCode lang slugs: python3, javascript, java, cpp
+  // Seed lcData from store cache first, then from problem's stored metaData
+  const [lcData, setLcData] = useState<{ description: string; codeSnippets: any[] } | null>(() => {
+    if (lcCacheEntry?.codeSnippets?.length) return lcCacheEntry;
+    if (problem.metaData?.codeSnippets?.length)
+      return { description: problem.description ?? '', codeSnippets: problem.metaData.codeSnippets };
+    return null;
+  });
+  const [fetchingLC, setFetchingLC] = useState(false);
+
+  const getSnippet = useCallback((l: string, snippets: any[] | null, p: any) => {
+    if (snippets && snippets.length > 0) {
       const slugMap: Record<string, string> = { python: 'python3', javascript: 'javascript', java: 'java', cpp: 'cpp' };
       const targetSlug = slugMap[l] || l;
-      const match = p.metaData.codeSnippets.find((s: any) => s.langSlug === targetSlug || s.lang.toLowerCase() === targetSlug);
+      const match = snippets.find((s: any) => s.langSlug === targetSlug || s.lang?.toLowerCase() === targetSlug);
       if (match) return match.code;
     }
     return STARTER[p.id]?.[l] ?? DEFAULT_STARTER(l);
   }, []);
 
-  const [code, setCode] = useState(getSnippet(lang, problem));
+  const [code, setCode] = useState(() => getSnippet(lang, lcData?.codeSnippets ?? null, problem));
   const [leftPanel, setLeftPanel] = useState<LeftPanel>('description');
   const [rightPanel, setRightPanel] = useState<RightPanel>('testcases');
   const [hintLevel, setHintLevel] = useState(0);
@@ -283,12 +294,35 @@ export default function ProblemDetail() {
   const [noteText, setNoteText] = useState('');
   const [noteSaved, setNoteSaved] = useState(false);
   const timerRef = useRef<ReturnType<typeof setInterval>>();
-  const { setProblemNote, problemNotes, addAttempt, updateAttempt, attempts, markSolved, solvedProblems } = useAppStore();
+  const { setProblemNote, problemNotes, addAttempt, updateAttempt, attempts, markSolved, solvedProblems, updateProblemMetaData } = useAppStore();
   const { user, updateUser } = useAuthStore();
 
   const existingNote = problemNotes.find((n) => n.problemId === id);
   const myAttempts = attempts.filter((a) => a.problemId === id);
   const solved = solvedProblems[id];
+
+  // Auto-fetch LC data for problems that don't have snippets yet, or for newly imported ones
+  useEffect(() => {
+    if (lcData?.codeSnippets?.length) return; // already have snippets
+    const lcLink = problem.leetcodeLink;
+    if (!lcLink) return;
+    if (fetchingLC) return;
+    setFetchingLC(true);
+    api.fetchLeetcode(lcLink)
+      .then(({ problem: lc }) => {
+        const snippets = lc.metaData?.codeSnippets ?? [];
+        const desc = lc.descriptionHtml ?? lc.description ?? '';
+        setLcData({ description: desc, codeSnippets: snippets });
+        // Update code editor with fetched snippet
+        setCode(getSnippet(lang, snippets, problem));
+        // Persist into store so it's cached next time
+        if (typeof updateProblemMetaData === 'function') {
+          updateProblemMetaData(problem.id, { codeSnippets: snippets }, desc);
+        }
+      })
+      .catch(() => { /* silently fail – user can still code */ })
+      .finally(() => setFetchingLC(false));
+  }, [id]);
 
   useEffect(() => {
     if (existingNote) setNoteText(existingNote.content);
@@ -308,7 +342,7 @@ export default function ProblemDetail() {
 
   const handleLangChange = (l: Lang) => {
     setLang(l);
-    setCode(getSnippet(l, problem));
+    setCode(getSnippet(l, lcData?.codeSnippets ?? null, problem));
   };
 
   const handleRun = useCallback(async () => {
@@ -419,11 +453,11 @@ export default function ProblemDetail() {
             {leftPanel === 'description' && (
               <div className="pd-description">
                 <div className="pd-problem-header">
-                  <h1>{SAMPLE_PROBLEM.number}. {SAMPLE_PROBLEM.title}</h1>
+                  <h1>{problem.title}</h1>
                   <div className="pd-meta">
-                    <span className={`diff-badge ${SAMPLE_PROBLEM.difficulty.toLowerCase()}`}>{SAMPLE_PROBLEM.difficulty}</span>
-                    <span className="acceptance">Acceptance: {SAMPLE_PROBLEM.acceptance}%</span>
-                    <span className="pattern-tag">{SAMPLE_PROBLEM.pattern}</span>
+                    <span className={`diff-badge ${(problem.difficulty ?? 'medium').toLowerCase()}`}>{problem.difficulty}</span>
+                    {fetchingLC && <span style={{ fontSize: 12, color: 'var(--text-dim)', display: 'flex', alignItems: 'center', gap: 4 }}><span className="spin" style={{ display: 'inline-block', width: 12, height: 12, border: '2px solid var(--primary)', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />Fetching from LeetCode…</span>}
+                    <span className="pattern-tag">{problem.patternId}</span>
                     {solved && <span className="solved-badge">✓ Solved</span>}
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '12px' }}>
@@ -432,12 +466,24 @@ export default function ProblemDetail() {
                      <button onClick={() => markSolved(id, solvedProblems[id]?.status || 'unsolved', revisionDate)} style={{ padding: '6px 10px', background: 'var(--primary)', border: 'none', color: '#000', borderRadius: '4px', fontSize: 12, cursor: 'pointer', fontWeight: 600 }}>Set Date</button>
                   </div>
                 </div>
-                <div className="pd-companies">
-                  {SAMPLE_PROBLEM.companies.map((c) => <span key={c} className="company-chip">{c}</span>)}
-                </div>
+                {(problem.companies?.length ?? 0) > 0 && (
+                  <div className="pd-companies">
+                    {problem.companies.map((c: string) => <span key={c} className="company-chip">{c}</span>)}
+                  </div>
+                )}
                 <div className="pd-body-text">
-                  <p dangerouslySetInnerHTML={{ __html: SAMPLE_PROBLEM.description.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') }} />
-                  {SAMPLE_PROBLEM.examples.map((ex, i) => (
+                  {lcData?.description ? (
+                    <p dangerouslySetInnerHTML={{ __html: lcData.description.replace(/\n/g, '<br/>').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/`([^`]+)`/g, '<code>$1</code>') }} />
+                  ) : problem.description ? (
+                    <p dangerouslySetInnerHTML={{ __html: problem.description.replace(/\n/g, '<br/>').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') }} />
+                  ) : fetchingLC ? (
+                    <p style={{ color: 'var(--text-dim)', fontStyle: 'italic' }}>Loading problem description from LeetCode…</p>
+                  ) : (
+                    problem.leetcodeLink ? (
+                      <p style={{ color: 'var(--text-dim)' }}>Description unavailable. <a href={problem.leetcodeLink} target="_blank" rel="noreferrer" style={{ color: 'var(--primary)' }}>View on LeetCode ↗</a></p>
+                    ) : <p style={{ color: 'var(--text-dim)', fontStyle: 'italic' }}>No description available.</p>
+                  )}
+                  {(problem.examples?.length ?? 0) > 0 && problem.examples.map((ex: any, i: number) => (
                     <div key={i} className="pd-example">
                       <div className="example-label">Example {i + 1}:</div>
                       <pre>{`Input: ${ex.input}\nOutput: ${ex.output}${ex.explanation ? '\nExplanation: ' + ex.explanation : ''}`}</pre>
@@ -662,7 +708,7 @@ export default function ProblemDetail() {
             {rightPanel === 'testcases' && (
               <div className="test-cases-panel">
                 <div className="tc-selector">
-                  {SAMPLE_PROBLEM.testCases.slice(0, 4).map((_, i) => (
+                  {(problem.testCases?.length ? problem.testCases : SAMPLE_PROBLEM.testCases).slice(0, 4).map((_: any, i: number) => (
                     <button key={i} className={`tc-chip ${selectedTest === i ? 'active' : ''} ${results?.[i] ? (results[i].passed ? 'pass' : 'fail') : ''}`}
                       onClick={() => setSelectedTest(i)}>
                       Case {i + 1}
@@ -673,11 +719,11 @@ export default function ProblemDetail() {
                 <div className="tc-detail">
                   <div className="tc-field">
                     <label>Input</label>
-                    <code>{SAMPLE_PROBLEM.testCases[selectedTest].input}</code>
+                    <code>{(problem.testCases?.length ? problem.testCases : SAMPLE_PROBLEM.testCases)[selectedTest]?.input}</code>
                   </div>
                   <div className="tc-field">
                     <label>Expected Output</label>
-                    <code className="tc-expected">{SAMPLE_PROBLEM.testCases[selectedTest].expected}</code>
+                    <code className="tc-expected">{(problem.testCases?.length ? problem.testCases : SAMPLE_PROBLEM.testCases)[selectedTest]?.expected || '(see LeetCode)'}</code>
                   </div>
                   {results?.[selectedTest] && (
                     <div className="tc-field">
@@ -696,7 +742,7 @@ export default function ProblemDetail() {
               <div className="result-panel">
                 {running && (
                   <div className="result-loading">
-                    <span className="spinner" />Running {SAMPLE_PROBLEM.testCases.length} test cases…
+                    <span className="spinner" />Running {problem.testCases?.length ?? SAMPLE_PROBLEM.testCases.length} test cases…
                   </div>
                 )}
                 {!running && results && (
