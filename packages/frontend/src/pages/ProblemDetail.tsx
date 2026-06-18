@@ -150,8 +150,20 @@ const APPROACHES = [
 
 export default function ProblemDetail() {
   const { id = 'longest-substring' } = useParams();
+  const problem = useAppStore(s => {
+    const builtin = s.customProblems.find(p => p.id === id);
+    if (builtin) return builtin;
+    // fallback to built-in problems list (exported elsewhere)
+    return s.customProblems.find(p => p.id === id) || null;
+  }) || {
+    // default placeholder if not found
+    title: SAMPLE_PROBLEM.title,
+    description: SAMPLE_PROBLEM.description,
+    testCases: SAMPLE_PROBLEM.testCases,
+    patternId: SAMPLE_PROBLEM.patternId,
+  };
   const [lang, setLang] = useState<Lang>('java');
-  const [code, setCode] = useState(STARTER[id]?.[lang] ?? DEFAULT_STARTER(lang));
+  const [code, setCode] = useState(STARTER[problem.id]?.[lang] ?? DEFAULT_STARTER(lang));
   const [leftPanel, setLeftPanel] = useState<LeftPanel>('description');
   const [rightPanel, setRightPanel] = useState<RightPanel>('testcases');
   const [hintLevel, setHintLevel] = useState(0);
@@ -198,7 +210,7 @@ export default function ProblemDetail() {
     setRunning(true);
     setRightPanel('result');
     setTimeout(() => {
-      const res = runCode(code, lang, SAMPLE_PROBLEM.testCases);
+      const res = runCode(code, lang, problem.testCases);
       setResults(res);
       setRunning(false);
     }, 1500);
@@ -208,15 +220,15 @@ export default function ProblemDetail() {
     setRunning(true);
     setRightPanel('result');
     setTimeout(() => {
-    const res = runCode(code, lang, SAMPLE_PROBLEM.testCases);
+    const res = runCode(code, lang, problem.testCases);
       setResults(res);
       setRunning(false);
       const allPass = res.every((r) => r.passed);
       addAttempt({
         id: crypto.randomUUID(),
         problemId: id,
-        problemTitle: SAMPLE_PROBLEM.title,
-        patternId: 'sliding-window',
+        problemTitle: problem.title,
+        patternId: problem.patternId,
         code,
         language: lang,
         status: allPass ? 'Accepted' : 'Wrong Answer',
