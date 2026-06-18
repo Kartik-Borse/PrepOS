@@ -14,43 +14,36 @@ import './ProblemDetail.css';
 const STARTER: Record<string, Record<string, string>> = {
   'longest-substring': {
     python:
-`def lengthOfLongestSubstring(s: str) -> int:
-    # Your solution here — must return an int
-    seen = {}
-    left = max_len = 0
-    for right, ch in enumerate(s):
-        if ch in seen and seen[ch] >= left:
-            left = seen[ch] + 1
-        seen[ch] = right
-        max_len = max(max_len, right - left + 1)
-    return max_len
-
-s = input().strip()
-print(lengthOfLongestSubstring(s))
+`class Solution:
+    def lengthOfLongestSubstring(self, s: str) -> int:
+        seen = {}
+        left = max_len = 0
+        for right, ch in enumerate(s):
+            if ch in seen and seen[ch] >= left:
+                left = seen[ch] + 1
+            seen[ch] = right
+            max_len = max(max_len, right - left + 1)
+        return max_len
 `,
     javascript:
-`function lengthOfLongestSubstring(s) {
-    // Your solution here — must return a number
-    const seen = new Map();
-    let left = 0, maxLen = 0;
-    for (let right = 0; right < s.length; right++) {
-        if (seen.has(s[right]) && seen.get(s[right]) >= left) {
-            left = seen.get(s[right]) + 1;
+`class Solution {
+    lengthOfLongestSubstring(s) {
+        const seen = new Map();
+        let left = 0, maxLen = 0;
+        for (let right = 0; right < s.length; right++) {
+            if (seen.has(s[right]) && seen.get(s[right]) >= left) {
+                left = seen.get(s[right]) + 1;
+            }
+            seen.set(s[right], right);
+            maxLen = Math.max(maxLen, right - left + 1);
         }
-        seen.set(s[right], right);
-        maxLen = Math.max(maxLen, right - left + 1);
+        return maxLen;
     }
-    return maxLen;
 }
-
-const s = require('fs').readFileSync('/dev/stdin','utf8').trim();
-console.log(lengthOfLongestSubstring(s));
 `,
     java:
-`import java.util.*;
-public class Main {
-    static int lengthOfLongestSubstring(String s) {
-        // Your solution here — must return an int
+`class Solution {
+    public int lengthOfLongestSubstring(String s) {
         Map<Character,Integer> seen = new HashMap<>();
         int left = 0, maxLen = 0;
         for (int r = 0; r < s.length(); r++) {
@@ -61,41 +54,32 @@ public class Main {
         }
         return maxLen;
     }
-    public static void main(String[] args) {
-        Scanner sc = new Scanner(System.in);
-        String s = sc.nextLine().trim();
-        System.out.println(lengthOfLongestSubstring(s));
-    }
 }
 `,
     cpp:
-`#include<bits/stdc++.h>
-using namespace std;
-int lengthOfLongestSubstring(string s) {
-    // Your solution here — must return an int
-    unordered_map<char,int> seen;
-    int left = 0, maxLen = 0;
-    for (int r = 0; r < (int)s.size(); r++) {
-        if (seen.count(s[r]) && seen[s[r]] >= left) left = seen[s[r]] + 1;
-        seen[s[r]] = r;
-        maxLen = max(maxLen, r - left + 1);
+`class Solution {
+public:
+    int lengthOfLongestSubstring(string s) {
+        unordered_map<char,int> seen;
+        int left = 0, maxLen = 0;
+        for (int r = 0; r < (int)s.size(); r++) {
+            if (seen.count(s[r]) && seen[s[r]] >= left) left = seen[s[r]] + 1;
+            seen[s[r]] = r;
+            maxLen = max(maxLen, r - left + 1);
+        }
+        return maxLen;
     }
-    return maxLen;
-}
-int main(){
-    string s; getline(cin, s);
-    cout << lengthOfLongestSubstring(s) << endl;
-}
+};
 `,
   },
 };
 
 const DEFAULT_STARTER = (lang: string) =>
   ({
-    python: `def solve():\n    # Read input, print output\n    line = input().strip()\n    # your logic here\n    print(line)\n\nsolve()`,
-    javascript: `const lines = require('fs').readFileSync('/dev/stdin','utf8').trim().split('\\n');\n// your logic here\nconsole.log(lines[0]);`,
-    cpp: `#include<bits/stdc++.h>\nusing namespace std;\nint main(){\n    string line;\n    getline(cin, line);\n    // your logic here\n    cout << line << endl;\n}`,
-    java: `import java.util.*;\npublic class Main{\n    public static void main(String[] args){\n        Scanner sc=new Scanner(System.in);\n        String line=sc.nextLine();\n        // your logic here\n        System.out.println(line);\n    }\n}`,
+    python: `class Solution:\n    def solve(self, *args):\n        # your logic here\n        pass`,
+    javascript: `class Solution {\n    solve(...args) {\n        // your logic here\n    }\n}`,
+    cpp: `class Solution {\npublic:\n    void solve() {\n        // your logic here\n    }\n};`,
+    java: `class Solution {\n    public void solve() {\n        // your logic here\n    }\n}`,
   }[lang] ?? '');
 
 // ── Real JDoodle execution engine ────────────────────────────────────────────
@@ -120,7 +104,8 @@ const LANG_MAP: Record<string, { language: string; versionIndex: string }> = {
 async function runCodeReal(
   code: string,
   lang: string,
-  testCases: { input: string; expected: string }[]
+  testCases: { input: string; expected: string }[],
+  id: string
 ): Promise<TestResult[]> {
   const { language, versionIndex } = LANG_MAP[lang] ?? LANG_MAP['javascript'];
   const results: TestResult[] = [];
@@ -131,7 +116,7 @@ async function runCodeReal(
       const resp = await fetch('/api/code', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ script: code, language, versionIndex, stdin: tc.input }),
+        body: JSON.stringify({ script: code, language, versionIndex, stdin: tc.input, problemId: id }),
       });
       const data = await resp.json();
       const runtimeMs = Date.now() - start;
@@ -317,7 +302,7 @@ export default function ProblemDetail() {
     setRunning(true);
     setRightPanel('result');
     try {
-      const res = await runCodeReal(code, lang, problem.testCases);
+      const res = await runCodeReal(code, lang, problem.testCases, id);
       setResults(res);
     } finally {
       setRunning(false);
@@ -328,7 +313,7 @@ export default function ProblemDetail() {
     setRunning(true);
     setRightPanel('result');
     try {
-      const res = await runCodeReal(code, lang, problem.testCases);
+      const res = await runCodeReal(code, lang, problem.testCases, id);
       setResults(res);
       const allPass = res.every((r) => r.passed);
       addAttempt({

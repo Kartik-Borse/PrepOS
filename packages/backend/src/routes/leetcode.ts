@@ -100,6 +100,14 @@ router.post('/fetch', async (req: Request, res: Response) => {
       companies = Object.values(ct).flat().map((c: any) => c.name).slice(0, 8);
     } catch { /* ignore */ }
 
+    // Parse function signature metadata
+    let metaData: any = null;
+    try {
+      if (q.metaData) {
+        metaData = JSON.parse(q.metaData);
+      }
+    } catch { /* ignore */ }
+
     const problem = {
       title: q.title,
       slug: q.titleSlug,
@@ -111,6 +119,7 @@ router.post('/fetch', async (req: Request, res: Response) => {
       topicTags: (q.topicTags || []).map((t: any) => t.name),
       hints: q.hints || [],
       exampleTestcases: q.exampleTestcases || '',
+      metaData: metaData,
       leetcodeId: parseInt(q.questionId, 10),
       leetcodeUrl: `https://leetcode.com/problems/${slug}/`,
     };
@@ -124,14 +133,15 @@ router.post('/fetch', async (req: Request, res: Response) => {
     const patternId = patternRow.rows[0]?.id ?? null;
 
     await query(
-      `INSERT INTO problems (title, slug, description, difficulty, pattern_id, acceptance_rate, company_tags)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
+      `INSERT INTO problems (title, slug, description, difficulty, pattern_id, acceptance_rate, company_tags, meta_data)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
        ON CONFLICT (slug) DO UPDATE SET
          title = EXCLUDED.title,
          description = EXCLUDED.description,
          difficulty = EXCLUDED.difficulty,
          acceptance_rate = EXCLUDED.acceptance_rate,
-         company_tags = EXCLUDED.company_tags`,
+         company_tags = EXCLUDED.company_tags,
+         meta_data = EXCLUDED.meta_data`,
       [
         problem.title,
         problem.slug,
@@ -140,6 +150,7 @@ router.post('/fetch', async (req: Request, res: Response) => {
         patternId,
         problem.acceptance,
         problem.companyTags,
+        problem.metaData,
       ]
     );
 

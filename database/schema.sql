@@ -58,6 +58,7 @@ CREATE TABLE IF NOT EXISTS problems (
   sample_output TEXT,
   explanation TEXT,
   hints TEXT[],
+  meta_data JSONB,
   time_limit INT DEFAULT 2000,
   memory_limit INT DEFAULT 256,
   created_at TIMESTAMP DEFAULT NOW()
