@@ -3,7 +3,7 @@ import {
   LayoutDashboard, Code2, BookOpen, Cpu, MessageSquare,
   BarChart2, Trophy, Bookmark, CalendarDays, Settings, Flame,
   Zap, Search, Bell, FileText, Users, Download, AlertCircle,
-  Timer, FileEdit, Brain, Braces, Building2, LogOut
+  Timer, FileEdit, Brain, Braces, Building2, LogOut, Gauge
 } from 'lucide-react';
 import { useAuthStore } from '../store/useAuthStore';
 import './Layout.css';
@@ -24,6 +24,7 @@ const navItems = [
 const bottomItems = [
   { to: '/notes',    icon: FileText,     label: 'Notes' },
   { to: '/snippets', icon: Braces,       label: 'Snippets' },
+  { to: '/tc-sc-analysis', icon: Gauge,  label: 'TC/SC Analysis' },
   { to: '/resume',   icon: FileEdit,     label: 'Resume' },
   { to: '/hr-questions', icon: Users,    label: 'HR Questions' },
   { to: '/mistakes', icon: AlertCircle,  label: 'Mistakes' },
