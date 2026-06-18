@@ -4,12 +4,14 @@ import { api } from '../lib/api';
 import './LeetcodeImport.css';
 
 interface Props {
+  patterns: { id: string; name: string }[];
   onClose: () => void;
-  onImported?: (problem: any) => void;
+  onImported?: (problem: any, patternId: string) => void;
 }
 
-export default function LeetcodeImport({ onClose, onImported }: Props) {
+export default function LeetcodeImport({ patterns, onClose, onImported }: Props) {
   const [url, setUrl] = useState('');
+  const [selectedPattern, setSelectedPattern] = useState(patterns[0]?.id || '');
   const [state, setState] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [problem, setProblem] = useState<any>(null);
   const [error, setError] = useState('');
@@ -22,7 +24,7 @@ export default function LeetcodeImport({ onClose, onImported }: Props) {
       const { problem: p } = await api.fetchLeetcode(url.trim());
       setProblem(p);
       setState('success');
-      onImported?.(p);
+      onImported?.(p, selectedPattern);
     } catch (err: any) {
       setError(err.message || 'Failed to fetch problem');
       setState('error');
@@ -46,7 +48,7 @@ export default function LeetcodeImport({ onClose, onImported }: Props) {
         <div className="lc-modal-body">
           <p className="lc-hint">Paste any LeetCode problem URL to fetch and save it to your problem set.</p>
 
-          <div className="lc-input-row">
+          <div className="lc-input-row" style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
             <input
               className="lc-url-input"
               placeholder="https://leetcode.com/problems/two-sum/"
@@ -54,7 +56,18 @@ export default function LeetcodeImport({ onClose, onImported }: Props) {
               onChange={e => setUrl(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && handleFetch()}
               autoFocus
+              style={{ flex: 1 }}
             />
+            <select
+              className="lc-url-input"
+              value={selectedPattern}
+              onChange={e => setSelectedPattern(e.target.value)}
+              style={{ width: '200px' }}
+            >
+              {patterns.map(p => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </select>
             <button
               className="lc-fetch-btn"
               onClick={handleFetch}

@@ -11,6 +11,7 @@ import {
   closestCenter,
 } from '@dnd-kit/core';
 import {
+import {
   SortableContext,
   arrayMove,
   rectSortingStrategy,
@@ -19,10 +20,11 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import {
   ChevronRight, Plus, Trash2, X, CheckCircle2, RotateCcw, Circle, Link2,
-  GripVertical, ListChecks, ExternalLink, Search,
+  GripVertical, ListChecks, ExternalLink, Search, Loader2,
 } from 'lucide-react';
 import { useAppStore, Problem, CustomPattern } from '../store/useAppStore';
 import LeetcodeImport from '../components/LeetcodeImport';
+import { api } from '../lib/api';
 import './DSAPatterns.css';
 
 // ── Built-in patterns ─────────────────────────────────────────────────────────
@@ -127,6 +129,28 @@ function AddQuestionModal({
   const [companies, setCompanies] = useState('');
   const [tc1Input, setTc1Input] = useState('');
   const [tc1Expected, setTc1Expected] = useState('');
+  const [fetchingLC, setFetchingLC] = useState(false);
+
+  const fetchLCData = async () => {
+    if (!lcLink.trim()) return;
+    setFetchingLC(true);
+    try {
+      const { problem } = await api.fetchLeetcode(lcLink.trim());
+      setTitle(problem.title || '');
+      if (['Easy', 'Medium', 'Hard'].includes(problem.difficulty)) {
+        setDifficulty(problem.difficulty as any);
+      }
+      setDesc(problem.description || '');
+      setCompanies((problem.companyTags || []).join(', '));
+      if (problem.exampleTestcases) {
+        const cases = problem.exampleTestcases.split('\n').filter(Boolean);
+        if (cases.length > 0) setTc1Input(cases[0]);
+      }
+    } catch (err) {
+      console.error('Failed to fetch LC data', err);
+    }
+    setFetchingLC(false);
+  };
 
   const submit = () => {
     if (!title.trim()) return;
@@ -175,7 +199,17 @@ function AddQuestionModal({
           <div className="form-row-2">
             <div className="form-field">
               <label>LeetCode Link</label>
-              <input value={lcLink} onChange={(e) => setLcLink(e.target.value)} placeholder="https://leetcode.com/problems/…" />
+              <div style={{ display: 'flex', gap: 8 }}>
+                <input value={lcLink} onChange={(e) => setLcLink(e.target.value)} placeholder="https://leetcode.com/problems/…" style={{ flex: 1 }} />
+                <button
+                  onClick={fetchLCData}
+                  disabled={!lcLink.trim() || fetchingLC}
+                  className="btn-secondary"
+                  style={{ whiteSpace: 'nowrap', padding: '0 12px' }}
+                >
+                  {fetchingLC ? <Loader2 size={14} className="spin" /> : 'Fetch Details'}
+                </button>
+              </div>
             </div>
             <div className="form-field">
               <label>Companies (comma separated)</label>
@@ -737,13 +771,14 @@ export default function DSAPatterns() {
 
       {showLCImport && (
         <LeetcodeImport
+          patterns={allPatterns.map(p => ({ id: p.id, name: p.name }))}
           onClose={() => setShowLCImport(false)}
-          onImported={(p) => {
+          onImported={(p, patternId) => {
             addProblem({
               id: `lc-${p.slug}`,
               title: p.title,
               difficulty: p.difficulty as Problem['difficulty'],
-              patternId: 'sliding-window',
+              patternId: patternId,
               description: p.description,
               examples: [],
               constraints: [],
