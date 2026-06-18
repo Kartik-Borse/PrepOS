@@ -1,6 +1,6 @@
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { CheckCircle2, Circle, RotateCcw, Link2, Plus, Trash2, X } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import LeetcodeImport from '../components/LeetcodeImport';
 import { useAppStore, Problem } from '../store/useAppStore';
 import { BUILTIN_PROBLEMS } from './DSAPatterns';
@@ -113,6 +113,40 @@ function AddQuestionModal({
   );
 }
 
+// ── Resizable columns hook ────────────────────────────────────────────────────
+const DEFAULT_WIDTHS = { num: 40, status: 36, title: 300, diff: 110, comp: 220, lc: 50, del: 36 };
+type ColKey = keyof typeof DEFAULT_WIDTHS;
+
+function useResizableCols() {
+  const [widths, setWidths] = useState(DEFAULT_WIDTHS);
+  const dragging = useRef<{ col: ColKey; startX: number; startW: number } | null>(null);
+
+  const onMouseDown = useCallback((col: ColKey, e: React.MouseEvent) => {
+    e.preventDefault();
+    dragging.current = { col, startX: e.clientX, startW: widths[col] };
+
+    const onMove = (ev: MouseEvent) => {
+      if (!dragging.current) return;
+      const delta = ev.clientX - dragging.current.startX;
+      const min = col === 'num' || col === 'status' || col === 'del' ? 28 : 60;
+      const newW = Math.max(min, dragging.current.startW + delta);
+      setWidths(w => ({ ...w, [dragging.current!.col]: newW }));
+    };
+    const onUp = () => {
+      dragging.current = null;
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+    };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+  }, [widths]);
+
+  const gridTemplate = Object.values(widths).map(w => `${w}px`).join(' ');
+  const totalWidth = Object.values(widths).reduce((a, b) => a + b, 0) + 80; // padding
+
+  return { widths, gridTemplate, totalWidth, onMouseDown };
+}
+
 // ── Main Component ─────────────────────────────────────────────────────────────
 export default function ProblemList() {
   const { patternId = 'two-pointers' } = useParams();
@@ -125,12 +159,14 @@ export default function ProblemList() {
     customPatterns,
   } = useAppStore();
 
-  const [filter, setFilter]           = useState<Difficulty>('All');
+  const [filter, setFilter]             = useState<Difficulty>('All');
   const [statusFilter, setStatusFilter] = useState<Status>('all');
-  const [sortBy, setSortBy]           = useState<SortBy>('latest');
+  const [sortBy, setSortBy]             = useState<SortBy>('latest');
   const [showLCImport, setShowLCImport] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<Problem | null>(null);
+
+  const { gridTemplate, totalWidth, onMouseDown } = useResizableCols();
 
   // Pattern name (built-in or custom)
   const customPattern = customPatterns.find((p) => p.id === patternId);
@@ -259,14 +295,29 @@ export default function ProblemList() {
         </div>
 
         {/* Table */}
-        <div className="problem-table">
-          <div className="pt-head">
+        <div className="problem-table" style={{ minWidth: totalWidth }}>
+          <div className="pt-head" style={{ gridTemplateColumns: gridTemplate }}>
             <span className="col-num">#</span>
-            <span className="col-status">Status</span>
-            <span className="col-title">Title</span>
-            <span className="col-diff">Difficulty</span>
-            <span className="col-comp">Companies</span>
-            <span className="col-lc">LC</span>
+            <span className="col-status">
+              Status
+              <span className="col-resizer" onMouseDown={e => onMouseDown('status', e)} />
+            </span>
+            <span className="col-title">
+              Title
+              <span className="col-resizer" onMouseDown={e => onMouseDown('title', e)} />
+            </span>
+            <span className="col-diff">
+              Difficulty
+              <span className="col-resizer" onMouseDown={e => onMouseDown('diff', e)} />
+            </span>
+            <span className="col-comp">
+              Companies
+              <span className="col-resizer" onMouseDown={e => onMouseDown('comp', e)} />
+            </span>
+            <span className="col-lc">
+              LC
+              <span className="col-resizer" onMouseDown={e => onMouseDown('lc', e)} />
+            </span>
             <span className="col-del" />
           </div>
 
@@ -282,6 +333,7 @@ export default function ProblemList() {
               <div
                 key={p.id}
                 className="pt-row"
+                style={{ gridTemplateColumns: gridTemplate }}
                 onClick={() => navigate(`/problem/${p.id}`)}
                 role="button"
                 tabIndex={0}

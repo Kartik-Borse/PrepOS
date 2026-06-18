@@ -85,11 +85,10 @@
 
 .pt-head, .pt-row {
   display: grid;
-  grid-template-columns: 40px 36px 1fr 110px 1fr 50px 36px;
-  min-width: 640px;
+  /* columns driven by inline style from JS */
   align-items: center;
   padding: 9px 16px;
-  gap: 10px;
+  gap: 0;
 }
 
 .pt-head {
@@ -98,6 +97,30 @@
   border-bottom: 1px solid var(--border);
   background: var(--surface2);
   border-radius: 12px 12px 0 0;
+  user-select: none;
+}
+
+/* Each header cell is relative so the resizer sits at its right edge */
+.pt-head span {
+  position: relative;
+  padding-right: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The drag handle */
+.col-resizer {
+  position: absolute; right: 0; top: 0;
+  width: 5px; height: 100%;
+  cursor: col-resize;
+  background: transparent;
+  transition: background 0.15s;
+  z-index: 1;
+  border-radius: 2px;
+}
+.col-resizer:hover, .col-resizer:active {
+  background: var(--primary);
 }
 
 .pt-row {
@@ -106,6 +129,9 @@
 }
 .pt-row:last-child { border-bottom: none; }
 .pt-row:hover { background: var(--surface2); }
+
+/* Cell padding for data rows */
+.pt-row > span { padding: 0 8px 0 0; overflow: hidden; }
 
 .col-num {
   font-size: 12px; color: var(--text-faint); font-weight: 500; text-align: right;
