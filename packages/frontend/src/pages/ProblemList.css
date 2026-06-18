@@ -63,12 +63,13 @@
 /* Table */
 .problem-table {
   background: var(--surface); border: 1px solid var(--border);
-  border-radius: 12px; overflow: hidden;
+  border-radius: 12px; overflow-x: auto;
 }
 
 .pt-head, .pt-row {
   display: grid;
-  grid-template-columns: 34px 1fr 90px 160px 44px 36px;
+  grid-template-columns: 34px 2fr 90px 1.5fr 44px 36px;
+  min-width: 600px;
   align-items: center;
   padding: 10px 16px;
   gap: 8px;

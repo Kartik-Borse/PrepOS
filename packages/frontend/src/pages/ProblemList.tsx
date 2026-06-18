@@ -32,6 +32,7 @@ const PATTERN_NAMES: Record<string, string> = {
 
 type Status = 'all' | 'solved' | 'revision' | 'unsolved';
 type Difficulty = 'All' | 'Easy' | 'Medium' | 'Hard';
+type SortBy = 'latest' | 'difficulty' | 'title';
 
 const diffColor = (d: string) =>
   d === 'Easy' ? 'var(--easy)' : d === 'Medium' ? 'var(--medium)' : 'var(--hard)';
@@ -129,6 +130,7 @@ export default function ProblemList() {
 
   const [filter, setFilter]           = useState<Difficulty>('All');
   const [statusFilter, setStatusFilter] = useState<Status>('all');
+  const [sortBy, setSortBy]           = useState<SortBy>('latest');
   const [showLCImport, setShowLCImport] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<Problem | null>(null);
@@ -146,15 +148,21 @@ export default function ProblemList() {
 
   // Sort: most recently solved first, then most recently added, then rest
   const sorted = [...builtinForPattern, ...customForPattern].sort((a, b) => {
-    const aS = solvedProblems[a.id];
-    const bS = solvedProblems[b.id];
-    if (aS && bS) return new Date(bS.solvedAt).getTime() - new Date(aS.solvedAt).getTime();
-    if (aS) return -1;
-    if (bS) return 1;
-    // Both unsolved — sort by addedAt desc
-    const aA = a.addedAt ? new Date(a.addedAt).getTime() : 0;
-    const bA = b.addedAt ? new Date(b.addedAt).getTime() : 0;
-    return bA - aA;
+    if (sortBy === 'latest') {
+      const aS = solvedProblems[a.id];
+      const bS = solvedProblems[b.id];
+      if (aS && bS) return new Date(bS.solvedAt).getTime() - new Date(aS.solvedAt).getTime();
+      if (aS) return -1;
+      if (bS) return 1;
+      const aA = a.addedAt ? new Date(a.addedAt).getTime() : 0;
+      const bA = b.addedAt ? new Date(b.addedAt).getTime() : 0;
+      return bA - aA;
+    } else if (sortBy === 'difficulty') {
+      const dMap = { Easy: 1, Medium: 2, Hard: 3 };
+      return dMap[a.difficulty] - dMap[b.difficulty];
+    } else {
+      return a.title.localeCompare(b.title);
+    }
   });
 
   const filtered = sorted.filter((p) => {
@@ -182,7 +190,15 @@ export default function ProblemList() {
         <div className="plp-header">
           <Link to="/dsa" className="back-link">← DSA Patterns</Link>
           <h1>{patternName}</h1>
-          <p className="sub">{sorted.length} problems · sorted by latest solve</p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: 'var(--text-dim)' }}>
+            <span>{sorted.length} problems</span>
+            <span>·</span>
+            <select value={sortBy} onChange={(e) => setSortBy(e.target.value as SortBy)} style={{ background: 'transparent', border: 'none', color: 'var(--text-dim)', fontSize: '13px', cursor: 'pointer', outline: 'none' }}>
+              <option value="latest">↓ Sorted by Latest Solve</option>
+              <option value="difficulty">Sorted by Difficulty</option>
+              <option value="title">Sorted by Title</option>
+            </select>
+          </div>
           <div className="plp-header-btns">
             <button className="btn-lc-import-sm" onClick={() => setShowLCImport(true)}>
               <Link2 size={13} /> Import from LeetCode

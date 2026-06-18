@@ -16,10 +16,6 @@ const patterns = [
 
 
 
-const heatmapData = Array.from({ length: 52 * 7 }, () => ({
-  count: Math.random() > 0.65 ? Math.floor(Math.random() * 6) : 0,
-}));
-
 function HeatCell({ count }: { count: number }) {
   const alpha = count === 0 ? 0 : count === 1 ? 0.25 : count <= 3 ? 0.55 : 0.9;
   return (
@@ -36,8 +32,30 @@ const diffColor = (d: string) =>
 
 export default function Dashboard() {
   const user = useAuthStore(s => s.user);
-  const { solvedProblems, attempts, dashboardConfig, hideWidget, unhideWidget, reorderWidgets } = useAppStore();
+  const { solvedProblems, attempts, dashboardConfig, hideWidget, unhideWidget, reorderWidgets, updateDailyGoal } = useAppStore();
   const [showSettings, setShowSettings] = useState(false);
+
+  // Goal edit state
+  const [isEditingGoal, setIsEditingGoal] = useState(false);
+  const [editTargetProblems, setEditTargetProblems] = useState(dashboardConfig.dailyGoal.targetProblems);
+  const [editTasks, setEditTasks] = useState<string[]>(dashboardConfig.dailyGoal.tasks);
+
+  const startEditingGoal = () => {
+    setEditTargetProblems(dashboardConfig.dailyGoal.targetProblems);
+    setEditTasks(dashboardConfig.dailyGoal.tasks);
+    setIsEditingGoal(true);
+  };
+
+  const saveGoal = () => {
+    updateDailyGoal(editTargetProblems, editTasks.filter(t => t.trim() !== ''));
+    setIsEditingGoal(false);
+  };
+
+  const updateEditTask = (index: number, val: string) => {
+    const newTasks = [...editTasks];
+    newTasks[index] = val;
+    setEditTasks(newTasks);
+  };
 
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'morning' : hour < 17 ? 'afternoon' : 'evening';
@@ -48,6 +66,14 @@ export default function Dashboard() {
   const solvedToday = Object.values(solvedProblems).filter(p => new Date(p.solvedAt) > new Date(new Date().setHours(0,0,0,0))).length;
   const totalXp = solvedCount * 25;
   const readiness = Math.min(100, Math.floor((solvedCount / 150) * 100));
+
+  const heatmapData = Array.from({ length: 52 * 7 }, (_, i) => {
+    const date = new Date();
+    date.setDate(date.getDate() - (52 * 7 - 1 - i));
+    const dateStr = date.toDateString();
+    const count = Object.values(solvedProblems).filter(p => new Date(p.solvedAt).toDateString() === dateStr).length;
+    return { count };
+  });
   
   const getTitle = (id: string) => attempts.find(a => a.problemId === id)?.problemTitle || id;
   const getPattern = (id: string) => attempts.find(a => a.problemId === id)?.patternId || 'Revision';
@@ -60,7 +86,6 @@ export default function Dashboard() {
     { label: 'Problems Solved', value: `${solvedCount}`, sub: `${solvedThisWeek} this week`, icon: Code2, color: 'var(--primary)' },
     { label: 'Current Streak', value: `${user?.currentStreak ?? 1} days`, sub: 'Keep it up!', icon: Flame, color: '#f97316' },
     { label: 'Readiness Score', value: `${readiness}%`, sub: 'Solve more problems', icon: Target, color: 'var(--success)' },
-    { label: 'Total XP', value: `${totalXp}`, sub: `Level ${Math.floor(totalXp/100) + 1}`, icon: TrendingUp, color: '#a78bfa' },
   ];
 
   const toggleWidget = (id: string) => {
@@ -189,32 +214,58 @@ export default function Dashboard() {
               <div className="card-header">
                 <div>
                   <h2>Today's Goal</h2>
-                  <p className="sub">Daily target: {dashboardConfig.dailyGoal.targetProblems} problems</p>
+                  {!isEditingGoal ? (
+                    <p className="sub">Daily target: {dashboardConfig.dailyGoal.targetProblems} problems</p>
+                  ) : (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
+                      <span className="sub">Target problems:</span>
+                      <input type="number" min="1" value={editTargetProblems} onChange={(e) => setEditTargetProblems(Number(e.target.value))} style={{ width: '60px', padding: '4px 8px', borderRadius: '4px', border: '1px solid var(--border)', background: 'var(--surface2)', color: 'var(--text)' }} />
+                    </div>
+                  )}
                 </div>
+                {!isEditingGoal ? (
+                  <button onClick={startEditingGoal} className="card-link" style={{ background: 'none', border: 'none', cursor: 'pointer' }}>Edit</button>
+                ) : (
+                  <button onClick={saveGoal} className="btn-primary" style={{ padding: '4px 10px', fontSize: '12px' }}>Save</button>
+                )}
               </div>
-              <div className="goal-ring-wrap">
-                <svg className="goal-ring" viewBox="0 0 80 80">
-                  <circle cx="40" cy="40" r="34" fill="none" stroke="var(--border)" strokeWidth="7" />
-                  <circle
-                    cx="40" cy="40" r="34" fill="none"
-                    stroke="var(--primary)" strokeWidth="7"
-                    strokeDasharray={`${2 * Math.PI * 34 * Math.min(1, solvedToday / dashboardConfig.dailyGoal.targetProblems)} ${2 * Math.PI * 34}`}
-                    strokeLinecap="round"
-                    transform="rotate(-90 40 40)"
-                  />
-                </svg>
-                <div className="goal-inner">
-                  <span className="goal-num">{solvedToday}/{dashboardConfig.dailyGoal.targetProblems}</span>
-                  <span className="goal-sub">done</span>
+              
+              {!isEditingGoal && (
+                <div className="goal-ring-wrap">
+                  <svg className="goal-ring" viewBox="0 0 80 80">
+                    <circle cx="40" cy="40" r="34" fill="none" stroke="var(--border)" strokeWidth="7" />
+                    <circle
+                      cx="40" cy="40" r="34" fill="none"
+                      stroke="var(--primary)" strokeWidth="7"
+                      strokeDasharray={`${2 * Math.PI * 34 * Math.min(1, solvedToday / dashboardConfig.dailyGoal.targetProblems)} ${2 * Math.PI * 34}`}
+                      strokeLinecap="round"
+                      transform="rotate(-90 40 40)"
+                    />
+                  </svg>
+                  <div className="goal-inner">
+                    <span className="goal-num">{solvedToday}/{dashboardConfig.dailyGoal.targetProblems}</span>
+                    <span className="goal-sub">done</span>
+                  </div>
                 </div>
-              </div>
-              <div className="goal-items">
-                {dashboardConfig.dailyGoal.tasks.map((g) => (
+              )}
+              
+              <div className="goal-items" style={{ marginTop: isEditingGoal ? '16px' : '0' }}>
+                {!isEditingGoal ? dashboardConfig.dailyGoal.tasks.map((g) => (
                   <div key={g} className="goal-item">
                     <span className="goal-check">○</span>
                     {g}
                   </div>
-                ))}
+                )) : (
+                  <>
+                    {editTasks.map((g, i) => (
+                      <div key={i} style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+                        <input value={g} onChange={(e) => updateEditTask(i, e.target.value)} style={{ flex: 1, padding: '6px 10px', borderRadius: '4px', border: '1px solid var(--border)', background: 'var(--surface2)', color: 'var(--text)' }} placeholder="Task description" />
+                        <button onClick={() => setEditTasks(editTasks.filter((_, idx) => idx !== i))} style={{ background: 'rgba(239,71,67,0.15)', color: 'var(--error)', border: 'none', borderRadius: '4px', padding: '0 10px', cursor: 'pointer', fontWeight: 'bold' }}>X</button>
+                      </div>
+                    ))}
+                    <button onClick={() => setEditTasks([...editTasks, ''])} style={{ background: 'var(--surface2)', border: '1px dashed var(--border)', color: 'var(--text-dim)', padding: '8px', borderRadius: '4px', cursor: 'pointer', width: '100%', fontSize: '13px', fontWeight: 600 }}>+ Add Task</button>
+                  </>
+                )}
               </div>
             </section>
           );
@@ -250,11 +301,11 @@ export default function Dashboard() {
               </div>
               <div className="company-list">
                 {[
-                  { name: 'Amazon', pct: 74, tag: 'SDE Intern' },
-                  { name: 'TCS NQT', pct: 88, tag: 'Digital' },
-                  { name: 'Infosys', pct: 82, tag: 'Specialist' },
-                  { name: 'Microsoft', pct: 56, tag: 'SDE' },
-                  { name: 'Flipkart', pct: 61, tag: 'SDE-1' },
+                  { name: 'Amazon', pct: Math.min(100, 74 + Math.floor(solvedCount * 1.5)), tag: 'SDE Intern' },
+                  { name: 'TCS NQT', pct: Math.min(100, 88 + Math.floor(solvedCount * 0.5)), tag: 'Digital' },
+                  { name: 'Infosys', pct: Math.min(100, 82 + Math.floor(solvedCount * 0.8)), tag: 'Specialist' },
+                  { name: 'Microsoft', pct: Math.min(100, 56 + Math.floor(solvedCount * 2)), tag: 'SDE' },
+                  { name: 'Flipkart', pct: Math.min(100, 61 + Math.floor(solvedCount * 1.8)), tag: 'SDE-1' },
                 ].map(({ name, pct, tag }) => (
                   <div key={name} className="company-row">
                     <div className="company-info">

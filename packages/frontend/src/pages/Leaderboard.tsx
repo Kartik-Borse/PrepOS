@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Flame, Zap } from 'lucide-react';
+import { useAuthStore } from '../store/useAuthStore';
 import './Leaderboard.css';
 
 const users = [
@@ -22,11 +23,25 @@ type Tab = 'global' | 'college' | 'friends';
 type Period = 'weekly' | 'alltime';
 
 export default function Leaderboard() {
+  const user = useAuthStore(state => state.user);
   const [tab, setTab] = useState<Tab>('global');
   const [period, setPeriod] = useState<Period>('alltime');
 
-  const top3 = users.slice(0, 3);
-  const rest = users.slice(3);
+  const dynamicUsers = users.map(u => {
+    if (u.isMe && user) {
+      return {
+        ...u,
+        name: user.fullName || 'You',
+        college: user.college || u.college,
+        streak: user.currentStreak || u.streak,
+        avatar: (user.fullName || 'You').substring(0, 2).toUpperCase()
+      };
+    }
+    return u;
+  });
+
+  const top3 = dynamicUsers.slice(0, 3);
+  const rest = dynamicUsers.slice(3);
 
   return (
     <div className="leaderboard-page">
@@ -65,7 +80,6 @@ export default function Leaderboard() {
                 <span className="podium-rank-badge">{rankEmojis[actualRank - 1]}</span>
               </div>
               <div className="podium-name">{u.name.split(' ')[0]}</div>
-              <div className="podium-xp"><Zap size={12} />{u.xp.toLocaleString()}</div>
               <div className="podium-base" style={{ height, background: rankColors[actualRank - 1] + '22', borderColor: rankColors[actualRank - 1] + '44' }}>
                 <span style={{ color: rankColors[actualRank - 1] }}>#{actualRank}</span>
               </div>
@@ -82,7 +96,6 @@ export default function Leaderboard() {
           <span className="col-college">College</span>
           <span className="col-solved">Solved</span>
           <span className="col-streak">Streak</span>
-          <span className="col-xp">XP</span>
         </div>
         {rest.map(u => (
           <div key={u.rank} className={`lb-row ${u.isMe ? 'is-me' : ''}`}>
@@ -98,10 +111,6 @@ export default function Leaderboard() {
             <span className="col-streak">
               <Flame size={13} style={{ color: 'var(--primary)' }} />
               {u.streak}d
-            </span>
-            <span className="col-xp xp-val">
-              <Zap size={12} />
-              {u.xp.toLocaleString()}
             </span>
           </div>
         ))}

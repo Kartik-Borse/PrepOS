@@ -149,7 +149,7 @@ const APPROACHES = [
 
 export default function ProblemDetail() {
   const { id = 'longest-substring' } = useParams();
-  const [lang, setLang] = useState<Lang>('python');
+  const [lang, setLang] = useState<Lang>('java');
   const [code, setCode] = useState(STARTER[id]?.[lang] ?? DEFAULT_STARTER(lang));
   const [leftPanel, setLeftPanel] = useState<LeftPanel>('description');
   const [rightPanel, setRightPanel] = useState<RightPanel>('testcases');
@@ -300,6 +300,11 @@ export default function ProblemDetail() {
                     <span className="pattern-tag">{SAMPLE_PROBLEM.pattern}</span>
                     {solved && <span className="solved-badge">✓ Solved</span>}
                   </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '12px' }}>
+                     <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>Next Revision:</span>
+                     <input type="date" value={revisionDate || (solvedProblems[id]?.nextRevisionAt ? new Date(solvedProblems[id].nextRevisionAt).toISOString().split('T')[0] : '')} onChange={(e) => setRevisionDate(e.target.value)} style={{ padding: '6px', background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text)', borderRadius: '4px', fontSize: 12 }} />
+                     <button onClick={() => markSolved(id, solvedProblems[id]?.status || 'unsolved', revisionDate)} style={{ padding: '6px 10px', background: 'var(--primary)', border: 'none', color: '#000', borderRadius: '4px', fontSize: 12, cursor: 'pointer', fontWeight: 600 }}>Set Date</button>
+                  </div>
                 </div>
                 <div className="pd-companies">
                   {SAMPLE_PROBLEM.companies.map((c) => <span key={c} className="company-chip">{c}</span>)}
@@ -448,12 +453,12 @@ export default function ProblemDetail() {
 
             {/* TC/SC Analysis */}
             {leftPanel === 'analysis' && (
-              <div className="pd-history">
+              <div className="pd-history tcsc-analysis-panel" style={{ background: '#000', borderRadius: '8px', padding: '16px', border: '1px solid var(--border)', height: '100%', display: 'flex', flexDirection: 'column' }}>
                 <h2>Complexity Analysis</h2>
                 {!results ? (
                   <p className="empty-state">Run your code first to analyze complexity.</p>
                 ) : (
-                  <div className="tcsc-analysis-panel" style={{ padding: 16 }}>
+                  <>
                     <div style={{ marginBottom: 16 }}>
                       <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
                         <span className="tag tc" style={{ background: 'var(--primary-dim)', color: 'var(--primary)', padding: '4px 8px', borderRadius: 4, fontSize: 12, fontWeight: 600 }}>TC: O(n)</span>
@@ -469,11 +474,11 @@ export default function ProblemDetail() {
                     <div className="ai-ask" style={{ marginTop: 'auto', borderTop: '1px solid var(--border)', paddingTop: 16 }}>
                       <div className="ai-ask-label">Ask AI about complexity</div>
                       <div className="ai-ask-row">
-                        <input placeholder="Why isn't it O(n^2)?" className="ai-ask-input" />
+                        <input placeholder="Why isn't it O(n^2)?" className="ai-ask-input" style={{ background: 'rgba(255,255,255,0.05)' }} />
                         <button className="ai-ask-btn">Ask</button>
                       </div>
                     </div>
-                  </div>
+                  </>
                 )}
               </div>
             )}
@@ -576,13 +581,6 @@ export default function ProblemDetail() {
                         <div className="result-title">{allPassed ? 'Accepted' : 'Wrong Answer'}</div>
                         <div className="result-sub">{passedCount}/{results.length} test cases · {results[0]?.runtimeMs}ms · {(results[0]?.memoryKB / 1000).toFixed(1)} MB</div>
                       </div>
-                      {allPassed ? (
-                        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>Revision:</span>
-                          <input type="date" value={revisionDate} onChange={(e) => setRevisionDate(e.target.value)} style={{ padding: '4px', background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', borderRadius: '4px', fontSize: 12 }} />
-                          <button onClick={() => markSolved(id, 'solved', revisionDate)} style={{ padding: '4px 8px', background: '#fff', border: 'none', color: '#000', borderRadius: '4px', fontSize: 12, cursor: 'pointer', fontWeight: 600 }}>Save</button>
-                        </div>
-                      ) : null}
                     </div>
                     <div className="result-cases">
                       {results.map((r, i) => (
