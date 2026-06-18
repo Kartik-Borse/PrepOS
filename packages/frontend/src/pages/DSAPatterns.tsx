@@ -11,7 +11,6 @@ import {
   closestCenter,
 } from '@dnd-kit/core';
 import {
-import {
   SortableContext,
   arrayMove,
   rectSortingStrategy,
