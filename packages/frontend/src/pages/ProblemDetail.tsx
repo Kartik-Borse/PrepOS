@@ -116,20 +116,18 @@ async function runCodeReal(
   for (const tc of testCases) {
     const start = Date.now();
     try {
-      // Wrap user code with a harness that reads stdin and calls Solution
-      const script = buildHarness(code, lang);
+      const script = buildExecutable(code, lang, tc.input);
       const resp = await fetch('/api/code', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ script, language, versionIndex, stdin: tc.input, problemId: id }),
+        body: JSON.stringify({ script, language, versionIndex, stdin: '', problemId: id }),
       });
       const data = await resp.json();
       const runtimeMs = Date.now() - start;
       const raw = (data.output ?? '').trim();
-      // Normalise: remove trailing whitespace, collapse multiple spaces in output
-      const actual = normaliseOutput(raw);
+      const actual   = normaliseOutput(raw);
       const expected = normaliseOutput(tc.expected);
-      const passed = !data.error && actual === expected;
+      const passed   = !data.error && actual === expected;
       results.push({
         passed,
         input: tc.input,
@@ -156,77 +154,134 @@ async function runCodeReal(
   return results;
 }
 
-/** Normalise output for comparison — trim, collapse whitespace */
+/** Normalise output for comparison */
 function normaliseOutput(s: string): string {
-  return s.trim().replace(/\r\n/g, '\n').replace(/[ \t]+\n/g, '\n').replace(/\n{2,}/g, '\n');
+  return s.trim().replace(/\r\n/g, '\n').replace(/\s+$/, '');
 }
 
 /**
- * Wrap user Solution code with a minimal stdin-reading harness per language.
- * This lets JDoodle call Solution methods with parsed inputs.
+ * Parse a single test-case input line into zero or more Python/JS literal values.
+ * e.g. '"abcabcbb"'  → ['"abcabcbb"']
+ *      '[2,7,11], 9' → ['[2,7,11]', '9']
  */
-function buildHarness(code: string, lang: string): string {
-  // If code already has a main / stdin read, return as-is
-  const hasMain = /public\s+static\s+void\s+main|int\s+main\s*\(|if\s+__name__\s*==|readline|Scanner\s+sc/.test(code);
+function parseArgs(input: string): string[] {
+  const raw = input.trim();
+  if (!raw) return [];
+  // Split on ', ' boundaries outside brackets/quotes
+  const args: string[] = [];
+  let depth = 0, inStr = false, strChar = '', cur = '';
+  for (let i = 0; i < raw.length; i++) {
+    const ch = raw[i];
+    if (inStr) {
+      cur += ch;
+      if (ch === strChar && raw[i - 1] !== '\\') inStr = false;
+    } else if (ch === '"' || ch === "'") {
+      inStr = true; strChar = ch; cur += ch;
+    } else if ('([{'.includes(ch)) { depth++; cur += ch; }
+    else if (')]}'.includes(ch)) { depth--; cur += ch; }
+    else if (ch === ',' && depth === 0) {
+      args.push(cur.trim()); cur = '';
+      if (raw[i + 1] === ' ') i++; // skip space after comma
+    } else { cur += ch; }
+  }
+  if (cur.trim()) args.push(cur.trim());
+  return args;
+}
+
+/**
+ * Build a complete runnable program for the given language.
+ * Injects the test input directly as arguments — no stdin needed.
+ */
+function buildExecutable(code: string, lang: string, input: string): string {
+  // If user already wrote main(), use as-is
+  const hasMain = /public\s+static\s+void\s+main\s*\(|^\s*int\s+main\s*\(|if\s+__name__|def\s+main\s*\(/.test(code);
   if (hasMain) return code;
 
+  const args = parseArgs(input);
+
   switch (lang) {
-    case 'python':
+    case 'python': {
+      // Convert JS-style args to Python literals (arrays → lists, true/false → True/False)
+      const pyArgs = args.map(a =>
+        a.replace(/\btrue\b/g, 'True').replace(/\bfalse\b/g, 'False').replace(/\bnull\b/g, 'None')
+      ).join(', ');
       return `${code}
-import sys
-_lines = sys.stdin.read().split('\\n') if sys.stdin else []
+
 _sol = Solution()
-# Try to find and call the single non-__init__ method
-import inspect
-_methods = [m for m,_ in inspect.getmembers(_sol, predicate=inspect.ismethod) if not m.startswith('_')]
+import inspect as _inspect
+_methods = [m for m in dir(_sol) if not m.startswith('_') and callable(getattr(_sol, m))]
 if _methods:
-    _fn = getattr(_sol, _methods[0])
-    try:
-        import ast
-        _args = [ast.literal_eval(l.strip()) for l in _lines if l.strip()]
-        print(_fn(*_args))
-    except Exception as e:
-        print(e)
+    _result = getattr(_sol, _methods[0])(${pyArgs})
+    print(_result)
 `;
+    }
 
-    case 'javascript':
+    case 'javascript': {
+      // Parse args as JS values
+      const jsArgs = args.map(a => {
+        try { JSON.parse(a); return a; } catch { return JSON.stringify(a); }
+      }).join(', ');
       return `${code}
-const lines = require('fs').readFileSync('/dev/stdin','utf8').trim().split('\\n');
-const sol = new Solution();
-const methods = Object.getOwnPropertyNames(Solution.prototype).filter(m => m !== 'constructor');
-if (methods.length) {
-  try {
-    const args = lines.map(l => { try { return JSON.parse(l); } catch { return l; } });
-    console.log(JSON.stringify(sol[methods[0]](...args)));
-  } catch(e) { console.error(e.message); }
-}`;
 
-    case 'java':
+const _sol = new Solution();
+const _methods = Object.getOwnPropertyNames(Solution.prototype).filter(m => m !== 'constructor');
+if (_methods.length) {
+  const _result = _sol[_methods[0]](${jsArgs});
+  console.log(JSON.stringify(_result));
+}`;
+    }
+
+    case 'java': {
+      // For Java: inject args by detecting the first non-init public method signature
+      // and generating typed arguments
+      const javaArgs = args.map(a => {
+        const t = a.trim();
+        if (t.startsWith('"')) return t;                          // String literal
+        if (t.startsWith('[')) return `new int[]{${t.slice(1,-1)}}`; // int array
+        if (t === 'true' || t === 'false') return t;              // boolean
+        return t;                                                  // int/long
+      }).join(', ');
+
+      // Strip existing class wrapper to wrap properly
       return `import java.util.*;
+import java.util.stream.*;
 ${code}
 class Main {
     public static void main(String[] args) {
-        Scanner sc = new Scanner(System.in);
         Solution sol = new Solution();
-        // Pass each input line as a string argument — best effort
-        // The solution method signature drives actual parsing
-        System.out.println("Run via JDoodle stdin");
+        System.out.println(sol.${detectJavaMethod(code)}(${javaArgs}));
     }
 }`;
+    }
 
-    case 'cpp':
+    case 'cpp': {
+      const cppArgs = args.join(', ');
       return `#include <bits/stdc++.h>
 using namespace std;
 ${code}
 int main() {
-    // Stdin-based harness not auto-generated for C++
-    // User should add main() manually or use Run with stdin
+    Solution sol;
+    auto result = sol.${detectCppMethod(code)}(${cppArgs});
+    cout << result << endl;
     return 0;
 }`;
+    }
 
     default:
       return code;
   }
+}
+
+/** Extract first public method name from Java Solution class */
+function detectJavaMethod(code: string): string {
+  const m = code.match(/public\s+\w[\w<>\[\]]*\s+(\w+)\s*\(/);
+  return m?.[1] ?? 'solve';
+}
+
+/** Extract first public method name from C++ Solution class */
+function detectCppMethod(code: string): string {
+  const m = code.match(/(?:public:|^\s*)(\w[\w<>\[\]]*)\s+(\w+)\s*\(/m);
+  return m?.[2] ?? 'solve';
 }
 
 // ── Hints ────────────────────────────────────────────────────────────────────
