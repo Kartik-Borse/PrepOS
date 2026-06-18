@@ -1,37 +1,36 @@
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Code2, BookOpen, Cpu,
-  MessageSquare, BarChart2, Trophy, Bookmark, FileText, Users, AlertCircle, Download,
+  MessageSquare, BarChart2, Trophy, Bookmark,
   CalendarDays, Settings, Timer, FileEdit, Brain, Braces, Building2, LogOut, Gauge
 } from 'lucide-react';
 import { useAuthStore } from '../store/useAuthStore';
-import { useAppStore } from '../store/useAppStore';
 import './Layout.css';
 
 const navItems = [
-  { to: '/dashboard',    icon: LayoutDashboard, label: 'Dashboard' },
-  { to: '/dsa',          icon: Code2,            label: 'DSA Patterns' },
-  { to: '/aptitude',     icon: BookOpen,         label: 'Aptitude' },
-  { to: '/core-cs',      icon: Cpu,              label: 'Core CS' },
-  { to: '/concept-cards',icon: Brain,            label: 'Concept Cards' },
-  { to: '/ai-interview', icon: MessageSquare,    label: 'AI Interview' },
-  { to: '/mock-contest', icon: Timer,            label: 'Mock Contest' },
-  { to: '/company-prep', icon: Building2,        label: 'Company Kits' },
-  { to: '/analytics',    icon: BarChart2,        label: 'Analytics' },
-  { to: '/leaderboard',  icon: Trophy,           label: 'Leaderboard' },
+  { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+  { to: '/dsa', icon: Code2, label: 'DSA Patterns' },
+  { to: '/aptitude', icon: BookOpen, label: 'Aptitude' },
+  { to: '/core-cs', icon: Cpu, label: 'Core CS' },
+  { to: '/concept-cards', icon: Brain, label: 'Concept Cards' },
+  { to: '/ai-interview', icon: MessageSquare, label: 'AI Interview' },
+  { to: '/mock-contest', icon: Timer, label: 'Mock Contest' },
+  { to: '/company-prep', icon: Building2, label: 'Company Kits' },
+  { to: '/analytics', icon: BarChart2, label: 'Analytics' },
+  { to: '/leaderboard', icon: Trophy, label: 'Leaderboard' },
 ];
 
 const bottomItems = [
-  { to: '/notes',    icon: FileText,     label: 'Notes' },
-  { to: '/snippets', icon: Braces,       label: 'Snippets' },
-  { to: '/tc-sc-analysis', icon: Gauge,  label: 'TC/SC Analysis' },
-  { to: '/resume',   icon: FileEdit,     label: 'Resume' },
-  { to: '/hr-questions', icon: Users,    label: 'HR Questions' },
-  { to: '/mistakes', icon: AlertCircle,  label: 'Mistakes' },
-  { to: '/progress', icon: Download,     label: 'Export' },
-  { to: '/bookmarks',icon: Bookmark,     label: 'Bookmarked' },
-  { to: '/study-plan',icon: CalendarDays,label: 'Study Plan' },
-  { to: '/settings', icon: Settings,     label: 'Settings' },
+  { to: '/notes', icon: FileText, label: 'Notes' },
+  { to: '/snippets', icon: Braces, label: 'Snippets' },
+  { to: '/tc-sc-analysis', icon: Gauge, label: 'TC/SC Analysis' },
+  { to: '/resume', icon: FileEdit, label: 'Resume' },
+  { to: '/hr-questions', icon: Users, label: 'HR Questions' },
+  { to: '/mistakes', icon: AlertCircle, label: 'Mistakes' },
+  { to: '/progress', icon: Download, label: 'Export' },
+  { to: '/bookmarks', icon: Bookmark, label: 'Bookmarked' },
+  { to: '/study-plan', icon: CalendarDays, label: 'Study Plan' },
+  { to: '/settings', icon: Settings, label: 'Settings' },
 ];
 
 export default function Layout() {
@@ -82,17 +81,15 @@ export default function Layout() {
           <div className="user-info">
             <span className="user-name">{user?.fullName ?? 'User'}</span>
             <span className="user-college">{user?.college ?? `Level ${user?.currentLevel ?? 1}`}</span>
-            <button className="user-streak" onClick={handleLogout} title="Logout" aria-label="Logout">
-              <LogOut size={14} />
-            </button>
-            {/* Display solved problems count as streak */}
-            <span className="streak-display">Solved: {Object.keys(useAppStore.getState().solvedProblems).length}</span>
           </div>
+          <button className="user-streak" onClick={handleLogout} title="Logout" aria-label="Logout">
+            <LogOut size={14} />
+          </button>
         </div>
       </aside>
 
       <div className="main-area">
-        
+
 
         <main className="page-content">
           <Outlet />
