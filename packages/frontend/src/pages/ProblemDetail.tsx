@@ -6,6 +6,7 @@ import {
   ChevronLeft, ChevronRight as ChevronR
 } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
+import { useAuthStore } from '../store/useAuthStore';
 import DSAVisualizer from '../components/DSAVisualizer';
 import './ProblemDetail.css';
 
@@ -166,6 +167,7 @@ export default function ProblemDetail() {
   const [noteSaved, setNoteSaved] = useState(false);
   const timerRef = useRef<ReturnType<typeof setInterval>>();
   const { setProblemNote, problemNotes, addAttempt, updateAttempt, attempts, markSolved, solvedProblems } = useAppStore();
+  const { user, updateUser } = useAuthStore();
 
   const existingNote = problemNotes.find((n) => n.problemId === id);
   const myAttempts = attempts.filter((a) => a.problemId === id);
@@ -223,9 +225,14 @@ export default function ProblemDetail() {
         hintsUsed: hintLevel,
         date: new Date().toISOString(),
       });
-      if (allPass) markSolved(id, 'solved', revisionDate || new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString());
+      if (allPass) {
+        if (!solvedProblems[id]) {
+          updateUser({ currentStreak: (user?.currentStreak || 0) + 1 });
+        }
+        markSolved(id, 'solved', revisionDate || new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString());
+      }
     }, 1500);
-  }, [code, lang, elapsed, id, hintLevel, addAttempt, markSolved, revisionDate]);
+  }, [code, lang, elapsed, id, hintLevel, addAttempt, markSolved, revisionDate, solvedProblems, user, updateUser]);
 
   const saveNote = () => {
     setProblemNote(id, noteText);

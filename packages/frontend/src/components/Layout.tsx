@@ -97,10 +97,6 @@ export default function Layout() {
             <kbd>/</kbd>
           </div>
           <div className="topbar-right">
-            <div className="xp-badge">
-              <Zap size={13} />
-              <span>{(user?.totalXp ?? 0).toLocaleString()} XP</span>
-            </div>
             <button className="streak-btn" aria-label={`Streak: ${user?.currentStreak ?? 0} days`}>
               <Flame size={15} className="flame-icon" />
               <span>{user?.currentStreak ?? 0}</span>
