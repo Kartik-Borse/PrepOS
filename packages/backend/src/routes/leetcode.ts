@@ -32,7 +32,7 @@ query getProblem($titleSlug: String!) {
       code
     }
   }
-}';
+}`;
 
 function slugFromUrl(url: string): string | null {
   // handles: https://leetcode.com/problems/two-sum/
