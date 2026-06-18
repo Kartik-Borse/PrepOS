@@ -157,10 +157,11 @@ export default function ProblemDetail() {
     return s.customProblems.find(p => p.id === id) || null;
   }) || {
     // default placeholder if not found
+    id: SAMPLE_PROBLEM.id,
     title: SAMPLE_PROBLEM.title,
     description: SAMPLE_PROBLEM.description,
     testCases: SAMPLE_PROBLEM.testCases,
-    patternId: SAMPLE_PROBLEM.patternId,
+    patternId: SAMPLE_PROBLEM.pattern,
   };
   const [lang, setLang] = useState<Lang>('java');
   const [code, setCode] = useState(STARTER[problem.id]?.[lang] ?? DEFAULT_STARTER(lang));

@@ -1,11 +1,11 @@
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import {
-  LayoutDashboard, Code2, BookOpen, Cpu, MessageSquare,
-  BarChart2, Trophy, Bookmark, CalendarDays, Settings, Flame,
-  Search, Bell, FileText, Users, Download, AlertCircle,
-  Timer, FileEdit, Brain, Braces, Building2, LogOut, Gauge
+  LayoutDashboard, Code2, BookOpen, Cpu,
+  MessageSquare, BarChart2, Trophy, Bookmark, FileText, Users, AlertCircle, Download,
+  CalendarDays, Settings, Timer, FileEdit, Brain, Braces, Building2, LogOut, Gauge
 } from 'lucide-react';
 import { useAuthStore } from '../store/useAuthStore';
+import { useAppStore } from '../store/useAppStore';
 import './Layout.css';
 
 const navItems = [
@@ -82,32 +82,17 @@ export default function Layout() {
           <div className="user-info">
             <span className="user-name">{user?.fullName ?? 'User'}</span>
             <span className="user-college">{user?.college ?? `Level ${user?.currentLevel ?? 1}`}</span>
+            <button className="user-streak" onClick={handleLogout} title="Logout" aria-label="Logout">
+              <LogOut size={14} />
+            </button>
+            {/* Display solved problems count as streak */}
+            <span className="streak-display">Solved: {Object.keys(useAppStore.getState().solvedProblems).length}</span>
           </div>
-          <button className="user-streak" onClick={handleLogout} title="Logout" aria-label="Logout">
-            <LogOut size={14} />
-          </button>
         </div>
       </aside>
 
       <div className="main-area">
-        <header className="topbar">
-          <div className="topbar-search">
-            <Search size={14} className="search-icon" />
-            <input placeholder="Search problems, topics…" />
-            <kbd>/</kbd>
-          </div>
-          <div className="topbar-right">
-            <button className="streak-btn" aria-label={`Streak: ${user?.currentStreak ?? 0} days`}>
-              <Flame size={15} className="flame-icon" />
-              <span>{user?.currentStreak ?? 0}</span>
-            </button>
-            <button className="icon-btn" aria-label="Notifications">
-              <Bell size={16} />
-              <span className="notif-dot" />
-            </button>
-            <div className="topbar-avatar">{initials}</div>
-          </div>
-        </header>
+        
 
         <main className="page-content">
           <Outlet />
