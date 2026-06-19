@@ -7,7 +7,6 @@
     "JDOODLE_CLIENT_SECRET": "76960ac70587c86243ec74b23d4332b41dd5df83b144e0ae260815ed2864536c"
   },
   "rewrites": [
-    { "source": "/api/(.*)", "destination": "/api/$1" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
