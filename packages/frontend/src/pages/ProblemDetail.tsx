@@ -113,16 +113,81 @@ async function runCodeReal(
   const { language, versionIndex } = LANG_MAP[lang] ?? LANG_MAP['javascript'];
   const results: TestResult[] = [];
 
+  // FRONTEND DEBUG: Log request details
+  const debugId = `frontend_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  console.log('[FRONTEND-CODE-RUN-DEBUG] Request Starting', {
+    debugId,
+    testCaseCount: testCases.length,
+    language: lang,
+    mappedLanguage: language,
+    versionIndex,
+    problemId: id,
+    codeLength: code.length,
+    endpoint: '/api/code/run',
+    timestamp: new Date().toISOString()
+  });
+
   for (const tc of testCases) {
     const start = Date.now();
     try {
       const script = buildExecutable(code, lang, tc.input);
+      
+      // FRONTEND DEBUG: Log individual test case request
+      console.log('[FRONTEND-CODE-RUN-DEBUG] Test Case Request', {
+        debugId,
+        testInput: tc.input,
+        scriptLength: script.length,
+        payload: { 
+          scriptPreview: script.substring(0, 100) + '...',
+          language, 
+          versionIndex, 
+          stdin: '', 
+          problemId: id 
+        }
+      });
+
       const resp = await fetch('/api/code/run', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ script, language, versionIndex, stdin: '', problemId: id }),
       });
+
+      // FRONTEND DEBUG: Log response details
+      console.log('[FRONTEND-CODE-RUN-DEBUG] Response Received', {
+        debugId,
+        status: resp.status,
+        statusText: resp.statusText,
+        ok: resp.ok,
+        headers: {
+          'content-type': resp.headers.get('content-type'),
+          'content-length': resp.headers.get('content-length')
+        },
+        url: resp.url
+      });
+
+      // Check if response is not OK (405, 500, etc.)
+      if (!resp.ok) {
+        console.error('[FRONTEND-CODE-RUN-DEBUG] ERROR Response', {
+          debugId,
+          status: resp.status,
+          statusText: resp.statusText,
+          possibleCauses: resp.status === 405 
+            ? ['Vercel routing not configured correctly', 'Method not matching', 'Wrong endpoint path']
+            : [`HTTP ${resp.status} error`]
+        });
+      }
+
       const data = await resp.json();
+      
+      // FRONTEND DEBUG: Log response data
+      console.log('[FRONTEND-CODE-RUN-DEBUG] Response Data', {
+        debugId,
+        hasOutput: !!data.output,
+        hasError: !!data.error,
+        requestId: data.requestId,
+        errorDetails: data.error
+      });
+
       const runtimeMs = Date.now() - start;
       const raw = (data.output ?? '').trim();
       const actual   = normaliseOutput(raw);
@@ -139,6 +204,15 @@ async function runCodeReal(
         steps: [`Output: ${actual}`, `Expected: ${expected}`, passed ? '✓ Match' : '✗ Mismatch'],
       });
     } catch (e: any) {
+      // FRONTEND DEBUG: Log catch block errors
+      console.error('[FRONTEND-CODE-RUN-DEBUG] EXCEPTION', {
+        debugId,
+        errorMessage: e.message,
+        errorName: e.name,
+        stack: e.stack,
+        testInput: tc.input
+      });
+
       results.push({
         passed: false,
         input: tc.input,
@@ -151,6 +225,14 @@ async function runCodeReal(
       });
     }
   }
+  
+  console.log('[FRONTEND-CODE-RUN-DEBUG] All Tests Complete', {
+    debugId,
+    totalTests: results.length,
+    passed: results.filter(r => r.passed).length,
+    failed: results.filter(r => !r.passed).length
+  });
+
   return results;
 }
 
