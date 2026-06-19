@@ -185,7 +185,8 @@ async function runCodeReal(
         hasOutput: !!data.output,
         hasError: !!data.error,
         requestId: data.requestId,
-        errorDetails: data.error
+        errorDetails: data.error,
+        rawOutput: data.output
       });
 
       const runtimeMs = Date.now() - start;
@@ -193,6 +194,18 @@ async function runCodeReal(
       const actual   = normaliseOutput(raw);
       const expected = normaliseOutput(tc.expected);
       const passed   = !data.error && actual === expected;
+      
+      // FRONTEND DEBUG: Log comparison details
+      console.log('[FRONTEND-CODE-RUN-DEBUG] Comparison', {
+        debugId,
+        testInput: tc.input,
+        rawOutput: raw,
+        actualNormalized: actual,
+        expectedNormalized: expected,
+        passed,
+        match: actual === expected
+      });
+      
       results.push({
         passed,
         input: tc.input,
