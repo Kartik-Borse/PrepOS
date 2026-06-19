@@ -275,7 +275,7 @@ interface AppState {
   removeProblemFromList: (listId: string, problemId: string) => void;
 
   // Cache for auto-fetched LC data (built-in problems)
-  lcCache: Record<string, { description: string; codeSnippets: any[] }>;
+  lcCache: Record<string, { description: string; codeSnippets: any[]; metaData?: any }>;
   updateProblemMetaData: (id: string, metaData: any, description: string) => void;
 }
 
@@ -309,7 +309,7 @@ export const useAppStore = create<AppState>()(
           const testCases = metaData.testCases?.length ? metaData.testCases : p.testCases;
           return { ...p, metaData, description, testCases };
         }),
-        lcCache: { ...s.lcCache, [id]: { description, codeSnippets: metaData.codeSnippets ?? [] } },
+        lcCache: { ...s.lcCache, [id]: { description, codeSnippets: metaData.codeSnippets ?? [], metaData } },
       })),
 
       hiddenProblems: [],

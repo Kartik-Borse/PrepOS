@@ -108,7 +108,8 @@ async function runCodeReal(
   code: string,
   lang: string,
   testCases: { input: string; expected: string }[],
-  id: string
+  id: string,
+  metaData?: any
 ): Promise<TestResult[]> {
   const { language, versionIndex } = LANG_MAP[lang] ?? LANG_MAP['javascript'];
   const results: TestResult[] = [];
@@ -144,14 +145,15 @@ async function runCodeReal(
           language, 
           versionIndex, 
           stdin, 
-          problemId: id 
+          problemId: id,
+          hasMetaData: !!metaData
         }
       });
 
       const resp = await fetch('/api/code/run', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ script: code, language, versionIndex, stdin, problemId: id }),
+        body: JSON.stringify({ script: code, language, versionIndex, stdin, problemId: id, metaData }),
       });
 
       // FRONTEND DEBUG: Log response details
@@ -450,10 +452,10 @@ export default function ProblemDetail() {
 
   const [lang, setLang] = useState<Lang>('java');
   // Seed lcData from store cache first, then from problem's stored metaData
-  const [lcData, setLcData] = useState<{ description: string; codeSnippets: any[] } | null>(() => {
+  const [lcData, setLcData] = useState<{ description: string; codeSnippets: any[]; metaData?: any } | null>(() => {
     if (lcCacheEntry?.codeSnippets?.length) return lcCacheEntry;
     if (problem.metaData?.codeSnippets?.length)
-      return { description: problem.description ?? '', codeSnippets: problem.metaData.codeSnippets };
+      return { description: problem.description ?? '', codeSnippets: problem.metaData.codeSnippets, metaData: problem.metaData };
     return null;
   });
   const [fetchingLC, setFetchingLC] = useState(false);
@@ -501,7 +503,7 @@ export default function ProblemDetail() {
 
   // Auto-fetch LC data for problems that don't have snippets yet, or for newly imported ones
   useEffect(() => {
-    if (lcData?.codeSnippets?.length) return; // already have snippets
+    if (lcData?.codeSnippets?.length && lcData?.metaData?.name) return; // already have runnable metadata
     const lcLink = problem.leetcodeLink;
     if (!lcLink) return;
     if (fetchingLC) return;
@@ -510,7 +512,7 @@ export default function ProblemDetail() {
       .then(({ problem: lc }) => {
         const snippets = lc.metaData?.codeSnippets ?? [];
         const desc = lc.descriptionHtml ?? lc.description ?? '';
-        setLcData({ description: desc, codeSnippets: snippets });
+        setLcData({ description: desc, codeSnippets: snippets, metaData: lc.metaData });
         setCode(getSnippet(lang, snippets, problem));
 
         // Parse test cases from LeetCode data
@@ -535,12 +537,12 @@ export default function ProblemDetail() {
             }
           }
           if (newTestCases.length && typeof updateProblemMetaData === 'function') {
-            updateProblemMetaData(problem.id, { codeSnippets: snippets, testCases: newTestCases }, desc);
+            updateProblemMetaData(problem.id, { ...lc.metaData, codeSnippets: snippets, testCases: newTestCases }, desc);
           }
         }
 
         if (typeof updateProblemMetaData === 'function') {
-          updateProblemMetaData(problem.id, { codeSnippets: snippets }, desc);
+          updateProblemMetaData(problem.id, { ...lc.metaData, codeSnippets: snippets }, desc);
         }
       })
       .catch(() => { /* silently fail – user can still code */ })
@@ -572,18 +574,18 @@ export default function ProblemDetail() {
     setRunning(true);
     setRightPanel('result');
     try {
-      const res = await runCodeReal(code, lang, problem.testCases, id);
+      const res = await runCodeReal(code, lang, problem.testCases, id, problem.metaData ?? lcData?.metaData);
       setResults(res);
     } finally {
       setRunning(false);
     }
-  }, [code, lang, problem.testCases]);
+  }, [code, lang, problem.testCases, problem.metaData, lcData?.metaData, id]);
 
   const handleSubmit = useCallback(async () => {
     setRunning(true);
     setRightPanel('result');
     try {
-      const res = await runCodeReal(code, lang, problem.testCases, id);
+      const res = await runCodeReal(code, lang, problem.testCases, id, problem.metaData ?? lcData?.metaData);
       setResults(res);
       const allPass = res.every((r) => r.passed);
       addAttempt({
@@ -608,7 +610,7 @@ export default function ProblemDetail() {
     } finally {
       setRunning(false);
     }
-  }, [code, lang, elapsed, id, hintLevel, addAttempt, markSolved, revisionDate, solvedProblems, user, updateUser, problem.testCases]);
+  }, [code, lang, elapsed, id, hintLevel, addAttempt, markSolved, revisionDate, solvedProblems, user, updateUser, problem.testCases, problem.metaData, lcData?.metaData]);
 
   const saveNote = () => {
     setProblemNote(id, noteText);

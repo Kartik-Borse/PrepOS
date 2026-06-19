@@ -30,7 +30,7 @@ router.post('/run', async (req, res) => {
     }
   });
 
-  const body = req.body; // JDoodleRequest & { problemId?: string }
+  const body = req.body; // JDoodleRequest & { problemId?: string; metaData?: ProblemMetadata }
   
   try {
     let metaData: ProblemMetadata | null = null;
@@ -38,11 +38,16 @@ router.post('/run', async (req, res) => {
     logExpressDebug('PROCESSING_REQUEST', {
       requestId,
       hasProblemId: !!body.problemId,
+      hasRequestMetadata: !!body.metaData,
       hasScript: !!body.script,
       language: body.language
     });
+
+    if (body.metaData?.name && Array.isArray(body.metaData?.params)) {
+      metaData = body.metaData;
+    }
     
-    if (body.problemId) {
+    if (!metaData && body.problemId) {
       // Try to fetch metadata from DB
       // Check if problemId is numeric (id) or string (slug)
       const isNumeric = /^\d+$/.test(String(body.problemId));

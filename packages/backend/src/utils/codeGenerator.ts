@@ -104,7 +104,7 @@ _run();
 function generateJavaWrapper(code: string, method: string, params: any[], ret: any): string {
   // Generate parameter parsing based on types
   const paramParsing = params.map((p, i) => {
-    const type = p.type || 'String';
+    const type = normalizeJavaType(p.type || 'String');
     if (type.includes('int[]')) {
       return `int[] param${i} = parseIntArray(inputs.get(${i}));`;
     } else if (type.includes('String[]')) {
@@ -125,7 +125,7 @@ function generateJavaWrapper(code: string, method: string, params: any[], ret: a
   }).join('\n        ');
 
   const paramNames = params.map((_, i) => `param${i}`).join(', ');
-  const returnType = ret.type || 'int';
+  const returnType = normalizeJavaType(ret.type || 'int');
 
   return `import java.util.*;
 import java.util.stream.*;
@@ -171,10 +171,22 @@ public class Main {
     static String[] parseStringArray(String s) {
         s = s.trim().replaceAll("^\\[|\\]$", "");
         if (s.isEmpty()) return new String[0];
-        return Arrays.stream(s.split(",")).map(x -> x.trim().replaceAll("^\\"|\\"$", "")).toArray(String[]::new);
+        return Arrays.stream(s.split(",")).map(x -> x.trim().replaceAll("^\\\"|\\\"$", "")).toArray(String[]::new);
     }
 }
 `;
+}
+
+function normalizeJavaType(type: string): string {
+  const normalized = type.toLowerCase();
+  if (normalized === 'integer') return 'int';
+  if (normalized === 'boolean') return 'boolean';
+  if (normalized === 'string') return 'String';
+  if (normalized === 'integer[]' || normalized === 'list<integer>') return 'int[]';
+  if (normalized === 'string[]' || normalized === 'list<string>') return 'String[]';
+  if (normalized === 'long') return 'long';
+  if (normalized === 'double') return 'double';
+  return type;
 }
 
 function generateJavaOutput(returnType: string): string {
