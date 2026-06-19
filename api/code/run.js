@@ -1,10 +1,10 @@
-import axios from 'axios';
+const axios = require('axios');
 
 /**
  * Vercel serverless function for /api/code/run
  * Executes code using JDoodle API
  */
-export default async function handler(req: any, res: any) {
+module.exports = async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method Not Allowed' });
   }
@@ -22,8 +22,8 @@ export default async function handler(req: any, res: any) {
     });
 
     return res.status(200).json(response.data);
-  } catch (e: any) {
+  } catch (e) {
     console.error('JDoodle error', e?.response?.data || e.message);
     return res.status(500).json({ error: e?.response?.data?.error || e.message });
   }
-}
+};
