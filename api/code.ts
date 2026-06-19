@@ -16,6 +16,11 @@ function logDetailedError(stage: string, data: any) {
 export default async function handler(req: any, res: any) {
   const requestId = `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   
+  // Handle CORS preflight
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+  
   // LOG 1: Request received
   logDetailedError('REQUEST_RECEIVED', {
     requestId,
