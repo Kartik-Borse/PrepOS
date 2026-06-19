@@ -418,25 +418,49 @@ export default function ProblemList() {
           patterns={[{ id: patternId, name: patternName }]}
           onClose={() => setShowLCImport(false)}
           onImported={(p, importPatternId) => {
-            // Parse example test cases from the HTML description
+            // Build test cases by pairing:
+            // - inputs: from exampleTestcases (raw values, one per "group" from LeetCode)
+            // - outputs: from <pre> blocks in the HTML description
             const parsedTestCases: { input: string; expected: string }[] = [];
+
+            // Extract outputs from HTML description <pre> blocks
+            const expectedOutputs: string[] = [];
             if (p.descriptionHtml) {
               const preBlocks = [...p.descriptionHtml.matchAll(/<pre>([\s\S]*?)<\/pre>/gi)];
               for (const block of preBlocks) {
                 const text = block[1].replace(/<[^>]+>/g, '').trim();
-                const inputMatch = text.match(/Input:\s*(.+?)(?:\n|$)/i);
                 const outputMatch = text.match(/Output:\s*(.+?)(?:\n|$)/i);
-                if (inputMatch && outputMatch) {
-                  parsedTestCases.push({ input: inputMatch[1].trim(), expected: outputMatch[1].trim() });
+                if (outputMatch) expectedOutputs.push(outputMatch[1].trim());
+              }
+            }
+
+            // exampleTestcases: multi-line, each example's inputs are grouped
+            // For single-param problems: one line per example
+            // For multi-param problems: N lines per example (N = param count)
+            if (p.exampleTestcases) {
+              const lines = p.exampleTestcases.split('\n').filter((l: string) => l.trim());
+              const paramCount = p.metaData?.params?.length ?? 1;
+
+              if (paramCount === 1) {
+                // Each line is one test case input
+                lines.forEach((line: string, i: number) => {
+                  parsedTestCases.push({
+                    input: line.trim(),
+                    expected: expectedOutputs[i] ?? '',
+                  });
+                });
+              } else {
+                // Group N lines per test case
+                for (let i = 0; i < lines.length; i += paramCount) {
+                  const group = lines.slice(i, i + paramCount);
+                  parsedTestCases.push({
+                    input: group.join('\n'),
+                    expected: expectedOutputs[Math.floor(i / paramCount)] ?? '',
+                  });
                 }
               }
             }
-            // Fall back to exampleTestcases lines if no parsed cases
-            const testCases = parsedTestCases.length > 0
-              ? parsedTestCases
-              : p.exampleTestcases
-                ? p.exampleTestcases.split('\n').filter(Boolean).map((line: string) => ({ input: line, expected: '' }))
-                : [];
+
             addProblem({
               id: `lc-${p.slug}`,
               title: p.title,
@@ -445,7 +469,7 @@ export default function ProblemList() {
               description: p.descriptionHtml ?? p.description,
               examples: [],
               constraints: [],
-              testCases,
+              testCases: parsedTestCases,
               companies: p.companyTags ?? [],
               leetcodeLink: p.leetcodeUrl,
               tags: p.topicTags ?? [],

@@ -160,32 +160,49 @@ function normaliseOutput(s: string): string {
 }
 
 /**
- * Parse a single test-case input line into zero or more Python/JS literal values.
- * e.g. '"abcabcbb"'  → ['"abcabcbb"']
- *      '[2,7,11], 9' → ['[2,7,11]', '9']
+ * Parse a single test-case input string into argument values.
+ * Strips variable-name prefixes like "x = 121" → "121", s = "abc" → "abc"
+ * Handles: '"abcabcbb"', '[2,7,11], 9', 'x = 121', 'nums = [1,2,3], target = 9'
  */
 function parseArgs(input: string): string[] {
   const raw = input.trim();
   if (!raw) return [];
-  // Split on ', ' boundaries outside brackets/quotes
-  const args: string[] = [];
+
+  // If input has variable assignments (e.g. "x = 121" or "nums = [1,2,3], target = 9")
+  // strip the "varname = " prefix from each assignment
+  const hasAssignment = /^\s*\w+\s*=\s*/.test(raw);
+  let cleaned = raw;
+  if (hasAssignment) {
+    // Split by top-level commas, strip "name = " from each segment
+    const segments = splitTopLevel(raw);
+    cleaned = segments
+      .map(s => s.replace(/^\s*\w+\s*=\s*/, '').trim())
+      .join(', ');
+  }
+
+  return splitTopLevel(cleaned).map(s => s.trim()).filter(Boolean);
+}
+
+/** Split a string by top-level commas (not inside brackets or quotes) */
+function splitTopLevel(s: string): string[] {
+  const parts: string[] = [];
   let depth = 0, inStr = false, strChar = '', cur = '';
-  for (let i = 0; i < raw.length; i++) {
-    const ch = raw[i];
+  for (let i = 0; i < s.length; i++) {
+    const ch = s[i];
     if (inStr) {
       cur += ch;
-      if (ch === strChar && raw[i - 1] !== '\\') inStr = false;
+      if (ch === strChar && s[i - 1] !== '\\') inStr = false;
     } else if (ch === '"' || ch === "'") {
       inStr = true; strChar = ch; cur += ch;
     } else if ('([{'.includes(ch)) { depth++; cur += ch; }
     else if (')]}'.includes(ch)) { depth--; cur += ch; }
     else if (ch === ',' && depth === 0) {
-      args.push(cur.trim()); cur = '';
-      if (raw[i + 1] === ' ') i++; // skip space after comma
+      parts.push(cur.trim()); cur = '';
+      if (s[i + 1] === ' ') i++;
     } else { cur += ch; }
   }
-  if (cur.trim()) args.push(cur.trim());
-  return args;
+  if (cur.trim()) parts.push(cur.trim());
+  return parts;
 }
 
 /**
@@ -503,9 +520,34 @@ export default function ProblemDetail() {
         const snippets = lc.metaData?.codeSnippets ?? [];
         const desc = lc.descriptionHtml ?? lc.description ?? '';
         setLcData({ description: desc, codeSnippets: snippets });
-        // Update code editor with fetched snippet
         setCode(getSnippet(lang, snippets, problem));
-        // Persist into store so it's cached next time
+
+        // Parse test cases from LeetCode data
+        const expectedOutputs: string[] = [];
+        if (lc.descriptionHtml) {
+          const preBlocks = [...lc.descriptionHtml.matchAll(/<pre>([\s\S]*?)<\/pre>/gi)];
+          for (const block of preBlocks) {
+            const text = block[1].replace(/<[^>]+>/g, '').trim();
+            const m = text.match(/Output:\s*(.+?)(?:\n|$)/i);
+            if (m) expectedOutputs.push(m[1].trim());
+          }
+        }
+        if (lc.exampleTestcases && (!problem.testCases?.length || problem.testCases.every((t: any) => !t.expected))) {
+          const lines = lc.exampleTestcases.split('\n').filter((l: string) => l.trim());
+          const paramCount = lc.metaData?.params?.length ?? 1;
+          const newTestCases: { input: string; expected: string }[] = [];
+          if (paramCount === 1) {
+            lines.forEach((line: string, i: number) => newTestCases.push({ input: line.trim(), expected: expectedOutputs[i] ?? '' }));
+          } else {
+            for (let i = 0; i < lines.length; i += paramCount) {
+              newTestCases.push({ input: lines.slice(i, i + paramCount).join('\n'), expected: expectedOutputs[Math.floor(i / paramCount)] ?? '' });
+            }
+          }
+          if (newTestCases.length && typeof updateProblemMetaData === 'function') {
+            updateProblemMetaData(problem.id, { codeSnippets: snippets, testCases: newTestCases }, desc);
+          }
+        }
+
         if (typeof updateProblemMetaData === 'function') {
           updateProblemMetaData(problem.id, { codeSnippets: snippets }, desc);
         }

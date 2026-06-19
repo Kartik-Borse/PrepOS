@@ -304,7 +304,11 @@ export const useAppStore = create<AppState>()(
 
       lcCache: {},
       updateProblemMetaData: (id, metaData, description) => set((s) => ({
-        customProblems: s.customProblems.map((p) => p.id === id ? { ...p, metaData, description } : p),
+        customProblems: s.customProblems.map((p) => {
+          if (p.id !== id) return p;
+          const testCases = metaData.testCases?.length ? metaData.testCases : p.testCases;
+          return { ...p, metaData, description, testCases };
+        }),
         lcCache: { ...s.lcCache, [id]: { description, codeSnippets: metaData.codeSnippets ?? [] } },
       })),
 
