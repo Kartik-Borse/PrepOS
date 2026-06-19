@@ -130,18 +130,20 @@ async function runCodeReal(
   for (const tc of testCases) {
     const start = Date.now();
     try {
-      const script = buildExecutable(code, lang, tc.input);
+      // Send raw user code + test input to backend, let backend handle wrapping
+      const stdin = parseArgs(tc.input).join('\n');
       
       // FRONTEND DEBUG: Log individual test case request
       console.log('[FRONTEND-CODE-RUN-DEBUG] Test Case Request', {
         debugId,
         testInput: tc.input,
-        scriptLength: script.length,
+        stdin: stdin,
+        codeLength: code.length,
         payload: { 
-          scriptPreview: script.substring(0, 100) + '...',
+          codePreview: code.substring(0, 100) + '...',
           language, 
           versionIndex, 
-          stdin: '', 
+          stdin, 
           problemId: id 
         }
       });
@@ -149,7 +151,7 @@ async function runCodeReal(
       const resp = await fetch('/api/code/run', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ script, language, versionIndex, stdin: '', problemId: id }),
+        body: JSON.stringify({ script: code, language, versionIndex, stdin, problemId: id }),
       });
 
       // FRONTEND DEBUG: Log response details

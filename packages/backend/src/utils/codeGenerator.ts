@@ -35,44 +35,54 @@ import sys
 import json
 
 def _run():
-    lines = sys.stdin.read().splitlines()
+    lines = sys.stdin.read().strip().splitlines()
     if not lines:
         return
     # Parse args
     args = []
     for i, p in enumerate(${JSON.stringify(params)}):
         if i < len(lines):
+            line = lines[i].strip()
             try:
-                args.append(json.loads(lines[i]))
+                args.append(json.loads(line))
             except:
-                args.append(lines[i])
+                args.append(line)
     
     sol = Solution()
     res = getattr(sol, '${method}')(*args)
-    print(json.dumps(res).replace(" ", ""))
+    print(json.dumps(res, separators=(',', ':')))
 
 if __name__ == '__main__':
     _run()
 `;
-}
 
 function generateJSWrapper(code: string, method: string, params: any[], ret: any): string {
   return `${code}
 
 const fs = require('fs');
-function _run() {
-    const input = fs.readFileSync('/dev/stdin', 'utf8').trim().split('\\n');
-    if (!input.length || !input[0]) return;
+const readline = require('readline');
+
+async function _run() {
+    const rl = readline.createInterface({
+        input: process.stdin,
+        output: process.stdout,
+        terminal: false
+    });
+    
+    const lines = [];
+    for await (const line of rl) {
+        if (line.trim()) lines.push(line.trim());
+    }
+    
+    if (!lines.length) return;
     
     const args = [];
     const params = ${JSON.stringify(params)};
-    for (let i = 0; i < params.length; i++) {
-        if (i < input.length) {
-            try {
-                args.push(JSON.parse(input[i]));
-            } catch(e) {
-                args.push(input[i]);
-            }
+    for (let i = 0; i < params.length && i < lines.length; i++) {
+        try {
+            args.push(JSON.parse(lines[i]));
+        } catch(e) {
+            args.push(lines[i]);
         }
     }
     
@@ -88,33 +98,97 @@ function _run() {
 }
 _run();
 `;
-}
 
 function generateJavaWrapper(code: string, method: string, params: any[], ret: any): string {
-  // Java wrapper is complex since we must map types
-  // This is a minimal generic implementation using reflection or naive parsing.
-  // JDoodle requires the public class to be Main or Match the file. 
-  // We will assume the user provides class Solution. We inject public class Main.
+  // Generate parameter parsing based on types
+  const paramParsing = params.map((p, i) => {
+    const type = p.type || 'String';
+    if (type.includes('int[]')) {
+      return `int[] param${i} = parseIntArray(inputs.get(${i}));`;
+    } else if (type.includes('String[]')) {
+      return `String[] param${i} = parseStringArray(inputs.get(${i}));`;
+    } else if (type.includes('long[]')) {
+      return `long[] param${i} = parseLongArray(inputs.get(${i}));`;
+    } else if (type === 'int' || type === 'Integer') {
+      return `int param${i} = Integer.parseInt(inputs.get(${i}));`;
+    } else if (type === 'long' || type === 'Long') {
+      return `long param${i} = Long.parseLong(inputs.get(${i}));`;
+    } else if (type === 'double' || type === 'Double') {
+      return `double param${i} = Double.parseDouble(inputs.get(${i}));`;
+    } else if (type === 'String') {
+      return `String param${i} = inputs.get(${i}).replaceAll("\\"", "");`;
+    } else {
+      return `String param${i} = inputs.get(${i});`;
+    }
+  }).join('\n        ');
+
+  const paramNames = params.map((_, i) => `param${i}`).join(', ');
+  const returnType = ret.type || 'int';
+
   return `import java.util.*;
 import java.util.stream.*;
 
 ${code}
 
 public class Main {
-    public static void main(String[] args) throws Exception {
+    public static void main(String[] args) {
         Scanner sc = new Scanner(System.in);
-        // Naive line reader
         List<String> inputs = new ArrayList<>();
         while (sc.hasNextLine()) {
-            inputs.add(sc.nextLine());
+            String line = sc.nextLine().trim();
+            if (!line.isEmpty()) inputs.add(line);
         }
+        sc.close();
+        
         if (inputs.isEmpty()) return;
         
-        // This requires parsing JSON arrays natively without Jackson/Gson since we don't have them in JDoodle
-        // For simplicity we will tell the user that for Java, custom boilerplate is omitted in the editor 
-        // but fully parsing complex types requires JSON libraries.
-        System.out.println("Java automatic wrapper not fully implemented for complex types. Please use manual main.");
+        try {
+            ${paramParsing}
+            
+            Solution sol = new Solution();
+            ${returnType} result = sol.${method}(${paramNames});
+            
+            ${generateJavaOutput(returnType)}
+        } catch (Exception e) {
+            System.out.println("Error: " + e.getMessage());
+        }
+    }
+    
+    static int[] parseIntArray(String s) {
+        s = s.trim().replaceAll("^\\[|\\]$", "");
+        if (s.isEmpty()) return new int[0];
+        return Arrays.stream(s.split(",")).mapToInt(x -> Integer.parseInt(x.trim())).toArray();
+    }
+    
+    static long[] parseLongArray(String s) {
+        s = s.trim().replaceAll("^\\[|\\]$", "");
+        if (s.isEmpty()) return new long[0];
+        return Arrays.stream(s.split(",")).mapToLong(x -> Long.parseLong(x.trim())).toArray();
+    }
+    
+    static String[] parseStringArray(String s) {
+        s = s.trim().replaceAll("^\\[|\\]$", "");
+        if (s.isEmpty()) return new String[0];
+        return Arrays.stream(s.split(",")).map(x -> x.trim().replaceAll("^\\"|\\"$", "")).toArray(String[]::new);
     }
 }
 `;
+}
+
+function generateJavaOutput(returnType: string): string {
+  if (returnType.includes('int[]')) {
+    return 'System.out.println("[" + Arrays.stream(result).mapToObj(String::valueOf).collect(Collectors.joining(",")) + "]");';
+  } else if (returnType.includes('long[]')) {
+    return 'System.out.println("[" + Arrays.stream(result).mapToObj(String::valueOf).collect(Collectors.joining(",")) + "]");';
+  } else if (returnType.includes('double[]')) {
+    return 'System.out.println("[" + Arrays.stream(result).mapToObj(String::valueOf).collect(Collectors.joining(",")) + "]");';
+  } else if (returnType.includes('String[]')) {
+    return 'System.out.println("[" + String.join(",", Arrays.stream(result).map(s -> "\\"" + s + "\\"").toArray(String[]::new)) + "]");';
+  } else if (returnType.toLowerCase().includes('list')) {
+    return 'System.out.println("[" + result.stream().map(String::valueOf).collect(Collectors.joining(",")) + "]");';
+  } else if (returnType.equals("String")) {
+    return 'System.out.println("\\"" + result + "\\"");';
+  } else {
+    return 'System.out.println(result);';
+  }
 }
