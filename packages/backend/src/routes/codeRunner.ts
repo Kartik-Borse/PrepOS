@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { runCode, JDoodleRequest } from '../jdoodle';
+import { JDoodleApiError, runCode, JDoodleRequest } from '../jdoodle';
 import { query } from '../db/connection';
 import { generateWrapper, ProblemMetadata } from '../utils/codeGenerator';
 
@@ -91,15 +91,19 @@ router.post('/run', async (req, res) => {
     
     res.json(result);
   } catch (e: any) {
+    const statusCode = e instanceof JDoodleApiError ? e.statusCode : 500;
+
     logExpressDebug('ERROR', {
       requestId,
       errorMessage: e.message,
+      statusCode,
       stack: e.stack
     });
     
     console.error('JDoodle error', e);
-    res.status(500).json({ 
+    res.status(statusCode).json({
       error: e.message,
+      provider: 'jdoodle',
       requestId,
       timestamp: new Date().toISOString()
     });

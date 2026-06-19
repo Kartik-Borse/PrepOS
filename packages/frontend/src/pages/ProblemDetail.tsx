@@ -194,6 +194,26 @@ async function runCodeReal(
       });
 
       const runtimeMs = Date.now() - start;
+
+      if (!resp.ok || data.error) {
+        const message = data.error || `Runner request failed with HTTP ${resp.status}`;
+        results.push({
+          passed: false,
+          input: tc.input,
+          expected: normaliseOutput(tc.expected),
+          actual: `Runner error: ${message}`,
+          runtimeMs,
+          memoryKB: 0,
+          error: message,
+          steps: [
+            `Runner Error: ${message}`,
+            data.provider ? `Provider: ${data.provider}` : 'Provider: unknown',
+            data.requestId ? `Request ID: ${data.requestId}` : 'Request ID: unavailable'
+          ],
+        });
+        continue;
+      }
+
       const raw = (data.output ?? '').trim();
       const actual   = normaliseOutput(raw);
       const expected = normaliseOutput(tc.expected);
