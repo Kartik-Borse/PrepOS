@@ -154,9 +154,15 @@ async function runCodeReal(
   return results;
 }
 
-/** Normalise output for comparison */
+/** Normalise output for comparison — trim, collapse array spaces, lowercase booleans */
 function normaliseOutput(s: string): string {
-  return s.trim().replace(/\r\n/g, '\n').replace(/\s+$/, '');
+  return s.trim()
+    .replace(/\r\n/g, '\n')
+    .replace(/\s+$/, '')
+    .replace(/\[\s*/g, '[').replace(/\s*\]/g, ']')  // [0, 1] → [0,1]
+    .replace(/,\s+/g, ',')                            // [0, 1] → [0,1]
+    .replace(/\bTrue\b/g, 'true').replace(/\bFalse\b/g, 'false')  // Python booleans
+    .replace(/\bNone\b/g, 'null');
 }
 
 /**
@@ -220,18 +226,17 @@ function buildExecutable(code: string, lang: string, input: string): string {
     case 'python': {
       const pyArgs = args.map(a => {
         const t = a.trim();
-        // Bare word with no special chars → treat as string
         if (/^[a-zA-Z][a-zA-Z0-9]*$/.test(t)) return `"${t}"`;
         return t.replace(/\btrue\b/g, 'True').replace(/\bfalse\b/g, 'False').replace(/\bnull\b/g, 'None');
       }).join(', ');
       return `${code}
 
 _sol = Solution()
-import inspect as _inspect
 _methods = [m for m in dir(_sol) if not m.startswith('_') and callable(getattr(_sol, m))]
 if _methods:
     _result = getattr(_sol, _methods[0])(${pyArgs})
-    print(_result)
+    if _result is not None:
+        print(_result)
 `;
     }
 
@@ -252,16 +257,23 @@ if (_methods.length) {
     }
 
     case 'java': {
-      // Extract param types from the method signature
       const paramTypes = extractJavaParamTypes(code);
       const javaArgs = args.map((a, i) => formatJavaArg(a.trim(), paramTypes[i])).join(', ');
+      const methodName = detectJavaMethod(code);
+      const returnType = detectJavaReturnType(code);
+      // For array/list returns, use Arrays.toString to get readable output
+      const printExpr = returnType.includes('[]')
+        ? `Arrays.toString(sol.${methodName}(${javaArgs}))`
+        : returnType.toLowerCase().includes('list')
+          ? `sol.${methodName}(${javaArgs}).toString().replaceAll(", ", ",").replaceAll("\\[\\s*", "[").replaceAll("\\s*\\]", "]")`
+          : `sol.${methodName}(${javaArgs})`;
       return `import java.util.*;
 import java.util.stream.*;
 ${code}
 class Main {
     public static void main(String[] args) {
         Solution sol = new Solution();
-        System.out.println(sol.${detectJavaMethod(code)}(${javaArgs}));
+        System.out.println(${printExpr});
     }
 }`;
     }
@@ -287,10 +299,16 @@ int main() {
 
 /** Extract parameter types from Java method signature e.g. ["String", "int"] */
 function extractJavaParamTypes(code: string): string[] {
-  // Match the first non-main public method
-  const m = code.match(/public\s+\w[\w<>\[\]]*\s+\w+\s*\(([^)]*)\)/);
-  if (!m?.[1]?.trim()) return [];
-  return m[1].split(',').map(p => p.trim().split(/\s+/)[0]);
+  // Match first non-main public method
+  const regex = /public\s+[\w<>\[\]]+\s+(\w+)\s*\(([^)]*)\)/g;
+  let m: RegExpExecArray | null;
+  while ((m = regex.exec(code)) !== null) {
+    const name = m[1];
+    if (name === 'main' || name === 'Solution') continue;
+    if (!m[2].trim()) return [];
+    return m[2].split(',').map(p => p.trim().split(/\s+/)[0]);
+  }
+  return [];
 }
 
 /** Format a single arg as a Java literal given the expected type */
@@ -338,10 +356,30 @@ function formatCppArg(arg: string, _type?: string): string {
   return `"${t}"`;
 }
 
-/** Extract first public method name from Java Solution class */
+/** Extract first public non-main method name from Java Solution class */
 function detectJavaMethod(code: string): string {
-  const m = code.match(/public\s+\w[\w<>\[\]]*\s+(\w+)\s*\(/);
-  return m?.[1] ?? 'solve';
+  // Match all public methods, skip main and constructors
+  const regex = /public\s+([\w<>\[\]]+)\s+(\w+)\s*\(/g;
+  let m: RegExpExecArray | null;
+  while ((m = regex.exec(code)) !== null) {
+    const name = m[2];
+    if (name === 'main' || name === 'Solution') continue;
+    return name;
+  }
+  return 'solve';
+}
+
+/** Extract return type of the first non-main public method */
+function detectJavaReturnType(code: string): string {
+  const regex = /public\s+([\w<>\[\]]+)\s+(\w+)\s*\(/g;
+  let m: RegExpExecArray | null;
+  while ((m = regex.exec(code)) !== null) {
+    const retType = m[1];
+    const name = m[2];
+    if (name === 'main' || name === 'Solution') continue;
+    return retType;
+  }
+  return 'int';
 }
 
 /** Extract first public method name from C++ Solution class */
