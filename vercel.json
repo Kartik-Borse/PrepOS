@@ -2,29 +2,21 @@
   "version": 2,
   "buildCommand": "npm run build --workspace=frontend",
   "outputDirectory": "packages/frontend/dist",
-  "builds": [
-    {
-      "src": "api/code/run.js",
-      "use": "@vercel/node"
+  "functions": {
+    "api/code/run.js": {
+      "memory": 1024,
+      "maxDuration": 10
     }
-  ],
-  "headers": [
-    {
-      "source": "/api/(.*)",
-      "headers": [
-        { "key": "Access-Control-Allow-Credentials", "value": "true" },
-        { "key": "Access-Control-Allow-Origin", "value": "*" },
-        { "key": "Access-Control-Allow-Methods", "value": "GET,POST,PUT,DELETE,PATCH,OPTIONS" },
-        { "key": "Access-Control-Allow-Headers", "value": "Content-Type,Authorization,X-Request-ID" }
-      ]
-    }
-  ],
-  "env": {
-    "JDOODLE_CLIENT_ID": "b8d0b1ab44ad7837a4659802e477df3e",
-    "JDOODLE_CLIENT_SECRET": "76960ac70587c86243ec74b23d4332b41dd5df83b144e0ae260815ed2864536c"
   },
   "rewrites": [
-    { "source": "/((?!api).*)", "destination": "/index.html" }
+    {
+      "source": "/api/code/run",
+      "destination": "https://prep-os-backend.vercel.app/api/code/run"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
   ]
 }
 
