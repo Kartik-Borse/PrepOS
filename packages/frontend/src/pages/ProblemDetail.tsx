@@ -117,7 +117,7 @@ async function runCodeReal(
     const start = Date.now();
     try {
       const script = buildExecutable(code, lang, tc.input);
-      const resp = await fetch('/api/code', {
+      const resp = await fetch('/api/code/run', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ script, language, versionIndex, stdin: '', problemId: id }),
@@ -301,7 +301,7 @@ int main() {
   }
 }
 
-/** Extract parameter types from Java method signature e.g. ["String", "int"] */
+/** Extract parameter types from Java method signature e.g. ["String", "int[]"] */
 function extractJavaParamTypes(code: string): string[] {
   // Match first non-main public method
   const regex = /public\s+[\w<>\[\]]+\s+(\w+)\s*\(([^)]*)\)/g;
@@ -310,7 +310,16 @@ function extractJavaParamTypes(code: string): string[] {
     const name = m[1];
     if (name === 'main' || name === 'Solution') continue;
     if (!m[2].trim()) return [];
-    return m[2].split(',').map(p => p.trim().split(/\s+/)[0]);
+    return m[2].split(',').map(p => {
+      const parts = p.trim().split(/\s+/);
+      // Reconstruct type — handles both "int[] height" and "int height[]"
+      const typePart = parts[0];
+      const namePart = parts[parts.length - 1];
+      // If the param name ends with [] (C-style array: "int height[]"), fold [] onto type
+      const trailingBrackets = namePart.match(/(\[\])+$/);
+      if (trailingBrackets) return typePart + trailingBrackets[0];
+      return typePart;
+    });
   }
   return [];
 }
@@ -329,15 +338,18 @@ function formatJavaArg(arg: string, type?: string): string {
   }
   // Single-quoted string
   if (t.startsWith("'") && t.endsWith("'")) return `"${t.slice(1, -1)}"`;
-  // Array literal [...]
+  // Array literal [...] — always treat as array regardless of declared type
   if (t.startsWith('[')) {
     const inner = t.slice(1, -1).trim();
-    if (!type || type.includes('int') || type.includes('Integer'))
-      return `new int[]{${inner}}`;
-    if (type.includes('String'))
+    // Nested arrays (2D) e.g. [[1,2],[3,4]] — not fully supported, pass raw
+    if (inner.startsWith('[')) return t;
+    if (type && type.includes('String'))
       return `new String[]{${inner.split(',').map(s => `"${s.trim()}"`).join(',')}}`;
-    if (type.includes('long'))
+    if (type && type.includes('long'))
       return `new long[]{${inner}}`;
+    if (type && type.includes('double'))
+      return `new double[]{${inner}}`;
+    // Default: int array (covers "int", "int[]", "Integer", etc.)
     return `new int[]{${inner}}`;
   }
   // Boolean
