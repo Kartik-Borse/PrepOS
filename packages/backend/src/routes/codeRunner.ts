@@ -44,7 +44,14 @@ router.post('/run', async (req, res) => {
     
     if (body.problemId) {
       // Try to fetch metadata from DB
-      const dbRes = await query(`SELECT meta_data FROM problems WHERE id = $1 OR slug = $1`, [body.problemId]);
+      // Check if problemId is numeric (id) or string (slug)
+      const isNumeric = /^\d+$/.test(String(body.problemId));
+      const query_sql = isNumeric 
+        ? `SELECT meta_data FROM problems WHERE id = $1`
+        : `SELECT meta_data FROM problems WHERE slug = $1`;
+      const query_param = isNumeric ? [parseInt(body.problemId, 10)] : [body.problemId];
+      
+      const dbRes = await query(query_sql, query_param);
       if (dbRes.rows.length > 0 && dbRes.rows[0].meta_data) {
         metaData = dbRes.rows[0].meta_data;
         logExpressDebug('METADATA_FETCHED', {
