@@ -201,10 +201,12 @@ function buildExecutable(code: string, lang: string, input: string): string {
 
   switch (lang) {
     case 'python': {
-      // Convert JS-style args to Python literals (arrays → lists, true/false → True/False)
-      const pyArgs = args.map(a =>
-        a.replace(/\btrue\b/g, 'True').replace(/\bfalse\b/g, 'False').replace(/\bnull\b/g, 'None')
-      ).join(', ');
+      const pyArgs = args.map(a => {
+        const t = a.trim();
+        // Bare word with no special chars → treat as string
+        if (/^[a-zA-Z][a-zA-Z0-9]*$/.test(t)) return `"${t}"`;
+        return t.replace(/\btrue\b/g, 'True').replace(/\bfalse\b/g, 'False').replace(/\bnull\b/g, 'None');
+      }).join(', ');
       return `${code}
 
 _sol = Solution()
@@ -217,9 +219,10 @@ if _methods:
     }
 
     case 'javascript': {
-      // Parse args as JS values
       const jsArgs = args.map(a => {
-        try { JSON.parse(a); return a; } catch { return JSON.stringify(a); }
+        const t = a.trim();
+        if (/^[a-zA-Z][a-zA-Z0-9]*$/.test(t)) return JSON.stringify(t); // bare word → string
+        try { JSON.parse(t); return t; } catch { return JSON.stringify(t); }
       }).join(', ');
       return `${code}
 
@@ -232,17 +235,9 @@ if (_methods.length) {
     }
 
     case 'java': {
-      // For Java: inject args by detecting the first non-init public method signature
-      // and generating typed arguments
-      const javaArgs = args.map(a => {
-        const t = a.trim();
-        if (t.startsWith('"')) return t;                          // String literal
-        if (t.startsWith('[')) return `new int[]{${t.slice(1,-1)}}`; // int array
-        if (t === 'true' || t === 'false') return t;              // boolean
-        return t;                                                  // int/long
-      }).join(', ');
-
-      // Strip existing class wrapper to wrap properly
+      // Extract param types from the method signature
+      const paramTypes = extractJavaParamTypes(code);
+      const javaArgs = args.map((a, i) => formatJavaArg(a.trim(), paramTypes[i])).join(', ');
       return `import java.util.*;
 import java.util.stream.*;
 ${code}
@@ -255,7 +250,8 @@ class Main {
     }
 
     case 'cpp': {
-      const cppArgs = args.join(', ');
+      const paramTypes = extractCppParamTypes(code);
+      const cppArgs = args.map((a, i) => formatCppArg(a.trim(), paramTypes[i])).join(', ');
       return `#include <bits/stdc++.h>
 using namespace std;
 ${code}
@@ -270,6 +266,59 @@ int main() {
     default:
       return code;
   }
+}
+
+/** Extract parameter types from Java method signature e.g. ["String", "int"] */
+function extractJavaParamTypes(code: string): string[] {
+  // Match the first non-main public method
+  const m = code.match(/public\s+\w[\w<>\[\]]*\s+\w+\s*\(([^)]*)\)/);
+  if (!m?.[1]?.trim()) return [];
+  return m[1].split(',').map(p => p.trim().split(/\s+/)[0]);
+}
+
+/** Format a single arg as a Java literal given the expected type */
+function formatJavaArg(arg: string, type?: string): string {
+  const t = arg.trim();
+  // Already a quoted string
+  if (t.startsWith('"') || t.startsWith("'")) return t.replace(/^'|'$/g, '"');
+  // Array literal
+  if (t.startsWith('[')) {
+    const inner = t.slice(1, -1);
+    if (!type || type.includes('int') || type.includes('Integer'))
+      return `new int[]{${inner}}`;
+    if (type.includes('String'))
+      return `new String[]{${inner.split(',').map(s => `"${s.trim()}"`).join(',')}}`;
+    return `new int[]{${inner}}`;
+  }
+  // Boolean
+  if (t === 'true' || t === 'false') return t;
+  // Numeric
+  if (/^-?\d+(\.\d+)?$/.test(t)) return t;
+  // Bare word — treat as String
+  return `"${t}"`;
+}
+
+/** Extract parameter types from C++ method signature */
+function extractCppParamTypes(code: string): string[] {
+  const m = code.match(/\w[\w:]*\s+\w+\s*\(([^)]*)\)/);
+  if (!m?.[1]?.trim()) return [];
+  return m[1].split(',').map(p => {
+    const parts = p.trim().split(/\s+/);
+    return parts.slice(0, -1).join(' ') || parts[0];
+  });
+}
+
+/** Format a single arg as a C++ literal */
+function formatCppArg(arg: string, _type?: string): string {
+  const t = arg.trim();
+  if (t.startsWith('"') || t.startsWith("'")) return `"${t.replace(/^["']|["']$/g, '')}"`;
+  if (t.startsWith('[')) {
+    const inner = t.slice(1, -1);
+    return `{${inner}}`;
+  }
+  if (/^-?\d+(\.\d+)?$/.test(t)) return t;
+  if (t === 'true' || t === 'false') return t;
+  return `"${t}"`;
 }
 
 /** Extract first public method name from Java Solution class */
