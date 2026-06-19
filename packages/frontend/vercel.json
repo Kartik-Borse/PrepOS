@@ -3,6 +3,10 @@
   "outputDirectory": "dist",
   "framework": "vite",
   "rewrites": [
+    {
+      "source": "/api/code/run",
+      "destination": "https://prep-os-backend.vercel.app/api/code/run"
+    },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
