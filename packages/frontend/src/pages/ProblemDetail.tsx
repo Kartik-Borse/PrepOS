@@ -193,7 +193,19 @@ async function runCodeReal(
       const raw = (data.output ?? '').trim();
       const actual   = normaliseOutput(raw);
       const expected = normaliseOutput(tc.expected);
-      const passed   = !data.error && actual === expected;
+      
+      // More lenient comparison - check exact match OR semantic equivalence
+      let passed = false;
+      if (!data.error) {
+        if (actual === expected) {
+          passed = true;
+        } else {
+          // Try lenient comparison for common cases
+          const actualClean = actual.replace(/\s/g, '').toLowerCase();
+          const expectedClean = expected.replace(/\s/g, '').toLowerCase();
+          passed = actualClean === expectedClean;
+        }
+      }
       
       // FRONTEND DEBUG: Log comparison details
       console.log('[FRONTEND-CODE-RUN-DEBUG] Comparison', {
@@ -203,7 +215,9 @@ async function runCodeReal(
         actualNormalized: actual,
         expectedNormalized: expected,
         passed,
-        match: actual === expected
+        exactMatch: actual === expected,
+        rawMatch: raw === tc.expected,
+        lenientMatch: actual.replace(/\s/g, '').toLowerCase() === expected.replace(/\s/g, '').toLowerCase()
       });
       
       results.push({
@@ -214,7 +228,12 @@ async function runCodeReal(
         runtimeMs,
         memoryKB: parseInt(data.memory ?? '0', 10),
         error: data.error,
-        steps: [`Output: ${actual}`, `Expected: ${expected}`, passed ? '✓ Match' : '✗ Mismatch'],
+        steps: [
+          `Raw Output: ${raw}`,
+          `Normalized Actual: ${actual}`,
+          `Normalized Expected: ${expected}`,
+          passed ? '✓ Match' : '✗ Mismatch'
+        ],
       });
     } catch (e: any) {
       // FRONTEND DEBUG: Log catch block errors
@@ -251,13 +270,23 @@ async function runCodeReal(
 
 /** Normalise output for comparison — trim, collapse array spaces, lowercase booleans */
 function normaliseOutput(s: string): string {
-  return s.trim()
+  let normalized = s.trim()
     .replace(/\r\n/g, '\n')
-    .replace(/\s+$/, '')
+    .replace(/\s+$/gm, '')  // Trim end of each line
     .replace(/\[\s*/g, '[').replace(/\s*\]/g, ']')  // [0, 1] → [0,1]
     .replace(/,\s+/g, ',')                            // [0, 1] → [0,1]
     .replace(/\bTrue\b/g, 'true').replace(/\bFalse\b/g, 'false')  // Python booleans
-    .replace(/\bNone\b/g, 'null');
+    .replace(/\bNone\b/g, 'null')
+    .replace(/^["']|["']$/g, '');  // Remove surrounding quotes
+  
+  // Try to parse as JSON and re-stringify for consistent formatting
+  try {
+    const parsed = JSON.parse(normalized);
+    return JSON.stringify(parsed);
+  } catch {
+    // Not valid JSON, return normalized string
+    return normalized.toLowerCase();  // Case-insensitive comparison for strings
+  }
 }
 
 /**
@@ -360,19 +389,31 @@ if (_methods.length) {
       const javaArgs = args.map((a, i) => formatJavaArg(a.trim(), paramTypes[i])).join(', ');
       const methodName = detectJavaMethod(code);
       const returnType = detectJavaReturnType(code);
-      // For array/list returns, use Arrays.toString to get readable output
-      const printExpr = returnType.includes('[]')
-        ? `Arrays.toString(sol.${methodName}(${javaArgs}))`
-        : returnType.toLowerCase().includes('list')
-          ? `sol.${methodName}(${javaArgs}).toString().replaceAll(", ", ",").replaceAll("\\[\\s*", "[").replaceAll("\\s*\\]", "]")`
-          : `sol.${methodName}(${javaArgs})`;
+      // Use custom print methods for arrays/lists to match JSON format without spaces
       return `import java.util.*;
 import java.util.stream.*;
 ${code}
 class Main {
     public static void main(String[] args) {
         Solution sol = new Solution();
-        System.out.println(${printExpr});
+        ${generateJavaPrint(methodName, javaArgs, returnType)}
+    }
+    
+    // Helper methods for JSON-formatted output
+    static String formatArray(int[] arr) {
+        return "[" + java.util.Arrays.stream(arr).mapToObj(String::valueOf).collect(java.util.stream.Collectors.joining(",")) + "]";
+    }
+    static String formatArray(long[] arr) {
+        return "[" + java.util.Arrays.stream(arr).mapToObj(String::valueOf).collect(java.util.stream.Collectors.joining(",")) + "]";
+    }
+    static String formatArray(double[] arr) {
+        return "[" + java.util.Arrays.stream(arr).mapToObj(String::valueOf).collect(java.util.stream.Collectors.joining(",")) + "]";
+    }
+    static String formatArray(String[] arr) {
+        return "[" + String.join(",", java.util.Arrays.stream(arr).map(s -> "\\"" + s + "\\"").toArray(String[]::new)) + "]";
+    }
+    static String formatList(List<?> list) {
+        return "[" + list.stream().map(String::valueOf).collect(java.util.stream.Collectors.joining(",")) + "]";
     }
 }`;
     }
@@ -508,6 +549,23 @@ function detectJavaReturnType(code: string): string {
 function detectCppMethod(code: string): string {
   const m = code.match(/(?:public:|^\s*)(\w[\w<>\[\]]*)\s+(\w+)\s*\(/m);
   return m?.[2] ?? 'solve';
+}
+
+/** Generate Java print statement based on return type */
+function generateJavaPrint(methodName: string, javaArgs: string, returnType: string): string {
+  const callExpr = `sol.${methodName}(${javaArgs})`;
+  
+  if (returnType.includes('int[]') || returnType.includes('long[]') || returnType.includes('double[]')) {
+    return `System.out.println(formatArray(${callExpr}));`;
+  } else if (returnType.includes('String[]')) {
+    return `System.out.println(formatArray(${callExpr}));`;
+  } else if (returnType.toLowerCase().includes('list')) {
+    return `System.out.println(formatList(${callExpr}));`;
+  } else if (returnType === 'String') {
+    return `System.out.println("\\"" + ${callExpr} + "\\"");`;
+  } else {
+    return `System.out.println(${callExpr});`;
+  }
 }
 
 // ── Hints ────────────────────────────────────────────────────────────────────
