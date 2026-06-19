@@ -6,6 +6,10 @@
       "use": "@vercel/node"
     }
   ],
+  "env": {
+    "JDOODLE_CLIENT_ID": "b8d0b1ab44ad7837a4659802e477df3e",
+    "JDOODLE_CLIENT_SECRET": "76960ac70587c86243ec74b23d4332b41dd5df83b144e0ae260815ed2864536c"
+  },
   "headers": [
     {
       "source": "/api/(.*)",
