@@ -167,26 +167,30 @@ function normaliseOutput(s: string): string {
 
 /**
  * Parse a single test-case input string into argument values.
- * Strips variable-name prefixes like "x = 121" → "121", s = "abc" → "abc"
- * Handles: '"abcabcbb"', '[2,7,11], 9', 'x = 121', 'nums = [1,2,3], target = 9'
+ * Handles:
+ *   - "x = 121"               → ["121"]
+ *   - "nums = [2,7,11], target = 9" → ["[2,7,11]", "9"]
+ *   - "[2,7,11,15]\n9"        → ["[2,7,11,15]", "9"]  (multi-line multi-param)
+ *   - "abcabcbb"              → ["abcabcbb"]
  */
 function parseArgs(input: string): string[] {
   const raw = input.trim();
   if (!raw) return [];
 
-  // If input has variable assignments (e.g. "x = 121" or "nums = [1,2,3], target = 9")
-  // strip the "varname = " prefix from each assignment
-  const hasAssignment = /^\s*\w+\s*=\s*/.test(raw);
-  let cleaned = raw;
-  if (hasAssignment) {
-    // Split by top-level commas, strip "name = " from each segment
-    const segments = splitTopLevel(raw);
-    cleaned = segments
-      .map(s => s.replace(/^\s*\w+\s*=\s*/, '').trim())
-      .join(', ');
+  // Multi-line input (each line is one argument — from exampleTestcases grouping)
+  if (raw.includes('\n')) {
+    return raw.split('\n').map(l => l.replace(/^\s*\w+\s*=\s*/, '').trim()).filter(Boolean);
   }
 
-  return splitTopLevel(cleaned).map(s => s.trim()).filter(Boolean);
+  // Variable assignment format: "x = 121" or "nums = [1,2,3], target = 9"
+  const hasAssignment = /^\s*\w+\s*=\s*/.test(raw);
+  if (hasAssignment) {
+    const segments = splitTopLevel(raw);
+    return segments.map(s => s.replace(/^\s*\w+\s*=\s*/, '').trim()).filter(Boolean);
+  }
+
+  // Plain single/multi value: "abcabcbb" or "[2,7,11], 9"
+  return splitTopLevel(raw).map(s => s.trim()).filter(Boolean);
 }
 
 /** Split a string by top-level commas (not inside brackets or quotes) */
@@ -314,22 +318,33 @@ function extractJavaParamTypes(code: string): string[] {
 /** Format a single arg as a Java literal given the expected type */
 function formatJavaArg(arg: string, type?: string): string {
   const t = arg.trim();
-  // Already a quoted string
-  if (t.startsWith('"') || t.startsWith("'")) return t.replace(/^'|'$/g, '"');
-  // Array literal
+  // Already double-quoted string
+  if (t.startsWith('"') && t.endsWith('"')) {
+    // If type is numeric, strip the quotes
+    if (type && (type === 'int' || type === 'long' || type === 'double' || type === 'float')) {
+      const inner = t.slice(1, -1);
+      if (/^-?\d+(\.\d+)?$/.test(inner)) return inner;
+    }
+    return t.replace(/^'|'$/g, '"');
+  }
+  // Single-quoted string
+  if (t.startsWith("'") && t.endsWith("'")) return `"${t.slice(1, -1)}"`;
+  // Array literal [...]
   if (t.startsWith('[')) {
-    const inner = t.slice(1, -1);
+    const inner = t.slice(1, -1).trim();
     if (!type || type.includes('int') || type.includes('Integer'))
       return `new int[]{${inner}}`;
     if (type.includes('String'))
       return `new String[]{${inner.split(',').map(s => `"${s.trim()}"`).join(',')}}`;
+    if (type.includes('long'))
+      return `new long[]{${inner}}`;
     return `new int[]{${inner}}`;
   }
   // Boolean
   if (t === 'true' || t === 'false') return t;
-  // Numeric
+  // Numeric (int, long, double)
   if (/^-?\d+(\.\d+)?$/.test(t)) return t;
-  // Bare word — treat as String
+  // Bare word with no spaces — treat as String
   return `"${t}"`;
 }
 
