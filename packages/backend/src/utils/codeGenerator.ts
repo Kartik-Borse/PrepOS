@@ -55,6 +55,7 @@ def _run():
 if __name__ == '__main__':
     _run()
 `;
+}
 
 function generateJSWrapper(code: string, method: string, params: any[], ret: any): string {
   return `${code}
@@ -98,6 +99,7 @@ async function _run() {
 }
 _run();
 `;
+}
 
 function generateJavaWrapper(code: string, method: string, params: any[], ret: any): string {
   // Generate parameter parsing based on types
@@ -186,7 +188,7 @@ function generateJavaOutput(returnType: string): string {
     return 'System.out.println("[" + String.join(",", Arrays.stream(result).map(s -> "\\"" + s + "\\"").toArray(String[]::new)) + "]");';
   } else if (returnType.toLowerCase().includes('list')) {
     return 'System.out.println("[" + result.stream().map(String::valueOf).collect(Collectors.joining(",")) + "]");';
-  } else if (returnType.equals("String")) {
+  } else if (returnType === 'String') {
     return 'System.out.println("\\"" + result + "\\"");';
   } else {
     return 'System.out.println(result);';
