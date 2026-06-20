@@ -38,8 +38,9 @@ export default function ProgressExport() {
   }));
 
   const totalTime = attempts.reduce((sum, a) => sum + a.timeTaken, 0);
-  const accepted = attempts.filter((a) => a.status === 'Accepted').length;
-  const accuracy = attempts.length > 0 ? Math.round((accepted / attempts.length) * 100) : 0;
+  const judgedAttempts = attempts.filter((a) => a.status !== 'Saved');
+  const accepted = judgedAttempts.filter((a) => a.status === 'Accepted').length;
+  const accuracy = judgedAttempts.length > 0 ? Math.round((accepted / judgedAttempts.length) * 100) : 0;
 
   const exportCSV = () => {
     const rows = [
@@ -80,7 +81,7 @@ export default function ProgressExport() {
   };
 
   // Group by pattern
-  const byPattern = attempts.reduce<Record<string, { total: number; accepted: number }>>((acc, a) => {
+  const byPattern = judgedAttempts.reduce<Record<string, { total: number; accepted: number }>>((acc, a) => {
     const key = a.patternId || 'unknown';
     if (!acc[key]) acc[key] = { total: 0, accepted: 0 };
     acc[key].total++;
@@ -170,7 +171,7 @@ export default function ProgressExport() {
             {attempts.slice(0, 50).map((a) => (
               <div key={a.id} className="at-row">
                 <span className="at-title">{a.problemTitle || getProblemTitle(a.problemId)}</span>
-                <span className={`at-status ${a.status === 'Accepted' ? 'pass' : 'fail'}`}>{a.status}</span>
+                <span className={`at-status ${a.status === 'Accepted' ? 'pass' : a.status === 'Saved' ? '' : 'fail'}`}>{a.status}</span>
                 <span className="lang-chip">{a.language}</span>
                 <span className="mono">{fmt(a.timeTaken)}</span>
                 <span className="mono">{a.timeMs}ms</span>
