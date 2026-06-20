@@ -28,7 +28,7 @@ export interface Attempt {
   patternId: string;
   code: string;
   language: string;
-  status: 'Accepted' | 'Wrong Answer' | 'TLE' | 'Error' | 'Saved';
+  status: 'Accepted' | 'Wrong Answer' | 'TLE' | 'Error';
   timeMs: number;
   timeTaken: number; // seconds
   hintsUsed: number;
