@@ -3,7 +3,6 @@ import cors from 'cors';
 import bodyParser from 'body-parser';
 import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
-import codeRunnerRouter from './routes/codeRunner';
 import aiRouter from './routes/ai';
 import authRouter from './routes/auth';
 import healthRouter from './routes/health';
@@ -17,15 +16,6 @@ const app = express();
 app.use(cors());
 app.use(bodyParser.json());
 
-// Simple rate limiter: max 30 requests per minute per IP
-const limiter = rateLimit({
-  windowMs: 60 * 1000,
-  max: 30,
-  standardHeaders: true,
-  legacyHeaders: false,
-});
-app.use('/api/code', limiter);
-app.use('/api/code', codeRunnerRouter);
 app.use('/api/ai', aiRouter);
 app.use('/api/auth', authRouter);
 app.use('/api/leetcode', leetcodeRouter);

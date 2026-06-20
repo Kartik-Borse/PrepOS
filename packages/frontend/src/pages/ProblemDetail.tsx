@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import {
-  Play, Send, ChevronDown, Lightbulb, Maximize2,
+  ChevronDown, Lightbulb, Maximize2,
   CheckCircle2, XCircle, Clock,
-  ChevronLeft, ChevronRight as ChevronR, BookmarkPlus, List
+  BookmarkPlus, List
 } from 'lucide-react';
 import { useAppStore } from '../store/useAppStore';
 import { useAuthStore } from '../store/useAuthStore';
@@ -85,283 +85,7 @@ const DEFAULT_STARTER = (lang: string) =>
     java: `// Fetching from LeetCode...\nclass Solution {}`,
   }[lang] ?? '// Fetching from LeetCode...');
 
-// ── Real JDoodle execution engine ────────────────────────────────────────────
-interface TestResult {
-  passed: boolean;
-  input: string;
-  expected: string;
-  actual: string;
-  runtimeMs: number;
-  memoryKB: number;
-  error?: string;
-  steps?: string[];
-}
-
-const LANG_MAP: Record<string, { language: string; versionIndex: string }> = {
-  python:     { language: 'python3',   versionIndex: '3' },
-  javascript: { language: 'nodejs',    versionIndex: '4' },
-  java:       { language: 'java',      versionIndex: '4' },
-  cpp:        { language: 'cpp17',     versionIndex: '1' },
-};
-
-async function runCodeReal(
-  code: string,
-  lang: string,
-  testCases: { input: string; expected: string }[],
-  id: string,
-  metaData?: any
-): Promise<TestResult[]> {
-  const { language, versionIndex } = LANG_MAP[lang] ?? LANG_MAP['javascript'];
-  const results: TestResult[] = [];
-
-  // FRONTEND DEBUG: Log request details
-  const debugId = `frontend_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-  console.log('[FRONTEND-CODE-RUN-DEBUG] Request Starting', {
-    debugId,
-    testCaseCount: testCases.length,
-    language: lang,
-    mappedLanguage: language,
-    versionIndex,
-    problemId: id,
-    codeLength: code.length,
-    endpoint: '/api/code/run',
-    timestamp: new Date().toISOString()
-  });
-
-  for (const tc of testCases) {
-    const start = Date.now();
-    try {
-      // Send raw user code + test input to backend, let backend handle wrapping
-      const stdin = parseArgs(tc.input).join('\n');
-      
-      // FRONTEND DEBUG: Log individual test case request
-      console.log('[FRONTEND-CODE-RUN-DEBUG] Test Case Request', {
-        debugId,
-        testInput: tc.input,
-        stdin: stdin,
-        codeLength: code.length,
-        payload: { 
-          codePreview: code.substring(0, 100) + '...',
-          language, 
-          versionIndex, 
-          stdin, 
-          problemId: id,
-          hasMetaData: !!metaData
-        }
-      });
-
-      const resp = await fetch('/api/code/run', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ script: code, language, versionIndex, stdin, problemId: id, metaData }),
-      });
-
-      // FRONTEND DEBUG: Log response details
-      console.log('[FRONTEND-CODE-RUN-DEBUG] Response Received', {
-        debugId,
-        status: resp.status,
-        statusText: resp.statusText,
-        ok: resp.ok,
-        headers: {
-          'content-type': resp.headers.get('content-type'),
-          'content-length': resp.headers.get('content-length')
-        },
-        url: resp.url
-      });
-
-      // Check if response is not OK (405, 500, etc.)
-      if (!resp.ok) {
-        console.error('[FRONTEND-CODE-RUN-DEBUG] ERROR Response', {
-          debugId,
-          status: resp.status,
-          statusText: resp.statusText,
-          possibleCauses: resp.status === 405 
-            ? ['Vercel routing not configured correctly', 'Method not matching', 'Wrong endpoint path']
-            : [`HTTP ${resp.status} error`]
-        });
-      }
-
-      const data = await resp.json();
-      
-      // FRONTEND DEBUG: Log response data
-      console.log('[FRONTEND-CODE-RUN-DEBUG] Response Data', {
-        debugId,
-        hasOutput: !!data.output,
-        hasError: !!data.error,
-        requestId: data.requestId,
-        errorDetails: data.error,
-        rawOutput: data.output
-      });
-
-      const runtimeMs = Date.now() - start;
-
-      if (!resp.ok || data.error) {
-        const message = data.error || `Runner request failed with HTTP ${resp.status}`;
-        results.push({
-          passed: false,
-          input: tc.input,
-          expected: normaliseOutput(tc.expected),
-          actual: `Runner error: ${message}`,
-          runtimeMs,
-          memoryKB: 0,
-          error: message,
-          steps: [
-            `Runner Error: ${message}`,
-            data.provider ? `Provider: ${data.provider}` : 'Provider: unknown',
-            data.requestId ? `Request ID: ${data.requestId}` : 'Request ID: unavailable'
-          ],
-        });
-        continue;
-      }
-
-      const raw = (data.output ?? '').trim();
-      const actual   = normaliseOutput(raw);
-      const expected = normaliseOutput(tc.expected);
-      
-      // More lenient comparison - check exact match OR semantic equivalence
-      let passed = false;
-      if (!data.error) {
-        if (actual === expected) {
-          passed = true;
-        } else {
-          // Try lenient comparison for common cases
-          const actualClean = actual.replace(/\s/g, '').toLowerCase();
-          const expectedClean = expected.replace(/\s/g, '').toLowerCase();
-          passed = actualClean === expectedClean;
-        }
-      }
-      
-      // FRONTEND DEBUG: Log comparison details
-      console.log('[FRONTEND-CODE-RUN-DEBUG] Comparison', {
-        debugId,
-        testInput: tc.input,
-        rawOutput: raw,
-        actualNormalized: actual,
-        expectedNormalized: expected,
-        passed,
-        exactMatch: actual === expected,
-        rawMatch: raw === tc.expected,
-        lenientMatch: actual.replace(/\s/g, '').toLowerCase() === expected.replace(/\s/g, '').toLowerCase()
-      });
-      
-      results.push({
-        passed,
-        input: tc.input,
-        expected,
-        actual: data.error ? `Error: ${data.error}` : actual,
-        runtimeMs,
-        memoryKB: parseInt(data.memory ?? '0', 10),
-        error: data.error,
-        steps: [
-          `Raw Output: ${raw}`,
-          `Normalized Actual: ${actual}`,
-          `Normalized Expected: ${expected}`,
-          passed ? '✓ Match' : '✗ Mismatch'
-        ],
-      });
-    } catch (e: any) {
-      // FRONTEND DEBUG: Log catch block errors
-      console.error('[FRONTEND-CODE-RUN-DEBUG] EXCEPTION', {
-        debugId,
-        errorMessage: e.message,
-        errorName: e.name,
-        stack: e.stack,
-        testInput: tc.input
-      });
-
-      results.push({
-        passed: false,
-        input: tc.input,
-        expected: tc.expected,
-        actual: '',
-        runtimeMs: Date.now() - start,
-        memoryKB: 0,
-        error: e.message,
-        steps: [`Error: ${e.message}`],
-      });
-    }
-  }
-  
-  console.log('[FRONTEND-CODE-RUN-DEBUG] All Tests Complete', {
-    debugId,
-    totalTests: results.length,
-    passed: results.filter(r => r.passed).length,
-    failed: results.filter(r => !r.passed).length
-  });
-
-  return results;
-}
-
-/** Normalise output for comparison — trim, collapse array spaces, lowercase booleans */
-function normaliseOutput(s: string): string {
-  let normalized = s.trim()
-    .replace(/\r\n/g, '\n')
-    .replace(/\s+$/gm, '')  // Trim end of each line
-    .replace(/\[\s*/g, '[').replace(/\s*\]/g, ']')  // [0, 1] → [0,1]
-    .replace(/,\s+/g, ',')                            // [0, 1] → [0,1]
-    .replace(/\bTrue\b/g, 'true').replace(/\bFalse\b/g, 'false')  // Python booleans
-    .replace(/\bNone\b/g, 'null')
-    .replace(/^["']|["']$/g, '');  // Remove surrounding quotes
-  
-  // Try to parse as JSON and re-stringify for consistent formatting
-  try {
-    const parsed = JSON.parse(normalized);
-    return JSON.stringify(parsed);
-  } catch {
-    // Not valid JSON, return normalized string
-    return normalized.toLowerCase();  // Case-insensitive comparison for strings
-  }
-}
-
-/**
- * Parse a single test-case input string into argument values.
- * Handles:
- *   - "x = 121"               → ["121"]
- *   - "nums = [2,7,11], target = 9" → ["[2,7,11]", "9"]
- *   - "[2,7,11,15]\n9"        → ["[2,7,11,15]", "9"]  (multi-line multi-param)
- *   - "abcabcbb"              → ["abcabcbb"]
- */
-function parseArgs(input: string): string[] {
-  const raw = input.trim();
-  if (!raw) return [];
-
-  // Multi-line input (each line is one argument — from exampleTestcases grouping)
-  if (raw.includes('\n')) {
-    return raw.split('\n').map(l => l.replace(/^\s*\w+\s*=\s*/, '').trim()).filter(Boolean);
-  }
-
-  // Variable assignment format: "x = 121" or "nums = [1,2,3], target = 9"
-  const hasAssignment = /^\s*\w+\s*=\s*/.test(raw);
-  if (hasAssignment) {
-    const segments = splitTopLevel(raw);
-    return segments.map(s => s.replace(/^\s*\w+\s*=\s*/, '').trim()).filter(Boolean);
-  }
-
-  // Plain single/multi value: "abcabcbb" or "[2,7,11], 9"
-  return splitTopLevel(raw).map(s => s.trim()).filter(Boolean);
-}
-
-/** Split a string by top-level commas (not inside brackets or quotes) */
-function splitTopLevel(s: string): string[] {
-  const parts: string[] = [];
-  let depth = 0, inStr = false, strChar = '', cur = '';
-  for (let i = 0; i < s.length; i++) {
-    const ch = s[i];
-    if (inStr) {
-      cur += ch;
-      if (ch === strChar && s[i - 1] !== '\\') inStr = false;
-    } else if (ch === '"' || ch === "'") {
-      inStr = true; strChar = ch; cur += ch;
-    } else if ('([{'.includes(ch)) { depth++; cur += ch; }
-    else if (')]}'.includes(ch)) { depth--; cur += ch; }
-    else if (ch === ',' && depth === 0) {
-      parts.push(cur.trim()); cur = '';
-      if (s[i + 1] === ' ') i++;
-    } else { cur += ch; }
-  }
-  if (cur.trim()) parts.push(cur.trim());
-  return parts;
-}
+// ── No code execution engine in spaced-repetition mode ────────────────────────
 
 // ── Hints ────────────────────────────────────────────────────────────────────
 const HINTS = [
@@ -398,7 +122,6 @@ const SAMPLE_PROBLEM = {
 
 type Lang = 'python' | 'javascript' | 'cpp' | 'java';
 type LeftPanel = 'description' | 'approach' | 'hints' | 'notes' | 'history' | 'visual' | 'analysis';
-type RightPanel = 'testcases' | 'result' | 'steps';
 
 // ── Approaches: Brute Force → Optimal ────────────────────────────────────────
 const APPROACHES = [
@@ -492,14 +215,9 @@ export default function ProblemDetail() {
 
   const [code, setCode] = useState(() => getSnippet(lang, lcData?.codeSnippets ?? null, problem));
   const [leftPanel, setLeftPanel] = useState<LeftPanel>('description');
-  const [rightPanel, setRightPanel] = useState<RightPanel>('testcases');
   const [hintLevel, setHintLevel] = useState(0);
-  const [running, setRunning] = useState(false);
-  const [results, setResults] = useState<TestResult[] | null>(null);
   const [timerOn, setTimerOn] = useState(false);
   const [elapsed, setElapsed] = useState(0);
-  const [selectedTest, setSelectedTest] = useState(0);
-  const [selectedStep, setSelectedStep] = useState(0);
   const [revisionDate, setRevisionDate] = useState('');
   const [noteText, setNoteText] = useState('');
   const [noteSaved, setNoteSaved] = useState(false);
@@ -590,47 +308,33 @@ export default function ProblemDetail() {
     setCode(getSnippet(l, lcData?.codeSnippets ?? null, problem));
   };
 
-  const handleRun = useCallback(async () => {
-    setRunning(true);
-    setRightPanel('result');
-    try {
-      const res = await runCodeReal(code, lang, problem.testCases, id, problem.metaData ?? lcData?.metaData);
-      setResults(res);
-    } finally {
-      setRunning(false);
-    }
-  }, [code, lang, problem.testCases, problem.metaData, lcData?.metaData, id]);
+  const handleSaveCode = () => {
+    // You could save code to store if needed
+    // setProblemNote could also store code, or we can just leave it in local state
+    setNoteSaved(true);
+    setTimeout(() => setNoteSaved(false), 1500);
+  };
 
-  const handleSubmit = useCallback(async () => {
-    setRunning(true);
-    setRightPanel('result');
-    try {
-      const res = await runCodeReal(code, lang, problem.testCases, id, problem.metaData ?? lcData?.metaData);
-      setResults(res);
-      const allPass = res.every((r) => r.passed);
-      addAttempt({
-        id: crypto.randomUUID(),
-        problemId: id,
-        problemTitle: problem.title,
-        patternId: problem.patternId,
-        code,
-        language: lang,
-        status: allPass ? 'Accepted' : 'Wrong Answer',
-        timeMs: res[0]?.runtimeMs ?? 0,
-        timeTaken: elapsed,
-        hintsUsed: hintLevel,
-        date: new Date().toISOString(),
-      });
-      if (allPass) {
-        if (!solvedProblems[id]) {
-          updateUser({ currentStreak: (user?.currentStreak || 0) + 1 });
-        }
-        markSolved(id, 'solved', revisionDate || new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString());
-      }
-    } finally {
-      setRunning(false);
+  const handleMarkSolved = useCallback(() => {
+    const nextRev = revisionDate || new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString();
+    addAttempt({
+      id: crypto.randomUUID(),
+      problemId: id,
+      problemTitle: problem.title,
+      patternId: problem.patternId,
+      code,
+      language: lang,
+      status: 'Accepted', // Assume accepted since they are marking it solved
+      timeMs: 0,
+      timeTaken: elapsed,
+      hintsUsed: hintLevel,
+      date: new Date().toISOString(),
+    });
+    if (!solvedProblems[id]) {
+      updateUser({ currentStreak: (user?.currentStreak || 0) + 1 });
     }
-  }, [code, lang, elapsed, id, hintLevel, addAttempt, markSolved, revisionDate, solvedProblems, user, updateUser, problem.testCases, problem.metaData, lcData?.metaData]);
+    markSolved(id, 'solved', nextRev);
+  }, [code, lang, elapsed, id, hintLevel, addAttempt, markSolved, revisionDate, solvedProblems, user, updateUser, problem.title, problem.patternId]);
 
   const saveNote = () => {
     setProblemNote(id, noteText);
@@ -643,9 +347,6 @@ export default function ProblemDetail() {
     const match = String(problem.id).match(/^lc-(\d+)$/);
     return match ? match[1] : null;
   })();
-
-  const allPassed = results?.every((r) => r.passed);
-  const passedCount = results?.filter((r) => r.passed).length ?? 0;
 
   return (
     <div className="pd-page">
@@ -923,9 +624,6 @@ export default function ProblemDetail() {
             {leftPanel === 'analysis' && (
               <div className="pd-history tcsc-analysis-panel" style={{ background: 'var(--surface2)', borderRadius: '8px', padding: '16px', border: '1px solid var(--border)', height: '100%', display: 'flex', flexDirection: 'column' }}>
                 <h2>Complexity Analysis</h2>
-                {!results ? (
-                  <p className="empty-state">Run your code first to analyze complexity.</p>
-                ) : (
                   <>
                     <div style={{ marginBottom: 16 }}>
                       <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
@@ -947,7 +645,6 @@ export default function ProblemDetail() {
                       </div>
                     </div>
                   </>
-                )}
               </div>
             )}
           </div>
@@ -967,11 +664,11 @@ export default function ProblemDetail() {
               <ChevronDown size={12} className="lang-chevron" />
             </div>
             <div className="editor-actions">
-              <button className="run-btn" onClick={handleRun} disabled={running}>
-                <Play size={13} />{running ? 'Running…' : 'Run'}
+              <button className="run-btn" onClick={handleSaveCode}>
+                <BookmarkPlus size={13} />{noteSaved ? 'Saved!' : 'Save Code'}
               </button>
-              <button className="submit-btn" onClick={handleSubmit} disabled={running}>
-                <Send size={13} />Submit
+              <button className="submit-btn" onClick={handleMarkSolved}>
+                <CheckCircle2 size={13} />Mark Solved
               </button>
             </div>
           </div>
@@ -990,108 +687,7 @@ export default function ProblemDetail() {
             />
           </div>
 
-          {/* Test panel */}
-          <div className="test-panel">
-            <div className="test-tabs">
-              {(['testcases', 'result', 'steps'] as RightPanel[]).map((t) => (
-                <button key={t} className={`test-tab ${rightPanel === t ? 'active' : ''}`} onClick={() => setRightPanel(t)}>
-                  {t === 'testcases' ? 'Test Cases' : t === 'result' ? 'Result' : 'Step-by-Step'}
-                </button>
-              ))}
-            </div>
-
-            {/* Test cases list */}
-            {rightPanel === 'testcases' && (
-              <div className="test-cases-panel">
-                <div className="tc-selector">
-                  {(problem.testCases?.length ? problem.testCases : SAMPLE_PROBLEM.testCases).slice(0, 4).map((_: any, i: number) => (
-                    <button key={i} className={`tc-chip ${selectedTest === i ? 'active' : ''} ${results?.[i] ? (results[i].passed ? 'pass' : 'fail') : ''}`}
-                      onClick={() => setSelectedTest(i)}>
-                      Case {i + 1}
-                      {results?.[i] && (results[i].passed ? ' ✓' : ' ✗')}
-                    </button>
-                  ))}
-                </div>
-                <div className="tc-detail">
-                  <div className="tc-field">
-                    <label>Input</label>
-                    <code>{(problem.testCases?.length ? problem.testCases : SAMPLE_PROBLEM.testCases)[selectedTest]?.input}</code>
-                  </div>
-                  <div className="tc-field">
-                    <label>Expected Output</label>
-                    <code className="tc-expected">{(problem.testCases?.length ? problem.testCases : SAMPLE_PROBLEM.testCases)[selectedTest]?.expected || '(see LeetCode)'}</code>
-                  </div>
-                  {results?.[selectedTest] && (
-                    <div className="tc-field">
-                      <label>Your Output</label>
-                      <code className={results[selectedTest].passed ? 'tc-expected' : 'tc-wrong'}>
-                        {results[selectedTest].actual}
-                      </code>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Result */}
-            {rightPanel === 'result' && (
-              <div className="result-panel">
-                {running && (
-                  <div className="result-loading">
-                    <span className="spinner" />Running {problem.testCases?.length ?? SAMPLE_PROBLEM.testCases.length} test cases…
-                  </div>
-                )}
-                {!running && results && (
-                  <>
-                    <div className={`result-banner ${allPassed ? 'accepted' : 'wrong'}`}>
-                      {allPassed ? <CheckCircle2 size={20} /> : <XCircle size={20} />}
-                      <div>
-                        <div className="result-title">{allPassed ? 'Accepted' : 'Wrong Answer'}</div>
-                        <div className="result-sub">{passedCount}/{results.length} test cases · {results[0]?.runtimeMs}ms · {(results[0]?.memoryKB / 1000).toFixed(1)} MB</div>
-                      </div>
-                    </div>
-                    <div className="result-cases">
-                      {results.map((r, i) => (
-                        <div key={i} className={`result-case ${r.passed ? 'pass' : 'fail'}`} onClick={() => { setSelectedTest(i); setRightPanel('testcases'); }}>
-                          <span>{r.passed ? '✓' : '✗'} Case {i + 1}</span>
-                          <span>{r.runtimeMs}ms</span>
-                        </div>
-                      ))}
-                    </div>
-                  </>
-                )}
-                {!running && !results && <div className="result-empty">Run your code to see results</div>}
-              </div>
-            )}
-
-            {/* Step-by-step */}
-            {rightPanel === 'steps' && (
-              <div className="steps-panel">
-                {!results ? (
-                  <div className="result-empty">Run your code first to see execution steps</div>
-                ) : (
-                  <>
-                    <div className="steps-header">
-                      <span>Execution trace for Case {selectedTest + 1}</span>
-                      <div className="steps-nav">
-                        <button onClick={() => setSelectedStep((s) => Math.max(0, s - 1))} disabled={selectedStep === 0}><ChevronLeft size={14} /></button>
-                        <span>{selectedStep + 1} / {results[selectedTest]?.steps?.length ?? 1}</span>
-                        <button onClick={() => setSelectedStep((s) => Math.min((results[selectedTest]?.steps?.length ?? 1) - 1, s + 1))} disabled={selectedStep >= (results[selectedTest]?.steps?.length ?? 1) - 1}><ChevronR size={14} /></button>
-                      </div>
-                    </div>
-                    <div className="step-detail">
-                      {results[selectedTest]?.steps?.map((step, i) => (
-                        <div key={i} className={`step-line ${i === selectedStep ? 'active' : i < selectedStep ? 'done' : ''}`}>
-                          <span className="step-num">{i + 1}</span>
-                          <span>{step}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </>
-                )}
-              </div>
-            )}
-          </div>
+          {/* Spaced repetition mode: no local test panel. Run code on LeetCode. */}
         </div>
       </div>
     </div>
