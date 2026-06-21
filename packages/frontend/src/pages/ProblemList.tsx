@@ -50,21 +50,29 @@ function AddQuestionModal({
   const [difficulty, setDifficulty] = useState<Problem['difficulty']>('Medium');
   const [lcLink, setLcLink]         = useState('');
   const [companies, setCompanies]   = useState('');
+  const [desc, setDesc]             = useState('');
+  const [customCode, setCustomCode] = useState('');
+  const [codeLanguage, setCodeLanguage] = useState('python3');
 
   const submit = () => {
     if (!title.trim()) return;
+    const metaData: any = {};
+    if (customCode.trim()) {
+      metaData.codeSnippets = [{ langSlug: codeLanguage, code: customCode }];
+    }
     onAdd({
       id: 'custom-' + Date.now(),
       title: title.trim(),
       difficulty,
       patternId,
-      description: '',
+      description: desc.trim(),
       examples: [],
       constraints: [],
       testCases: [],
       companies: companies.split(',').map((c) => c.trim()).filter(Boolean),
       leetcodeLink: lcLink.trim() || undefined,
       addedAt: new Date().toISOString(),
+      metaData: Object.keys(metaData).length > 0 ? metaData : undefined,
     });
     onClose();
   };
@@ -80,6 +88,10 @@ function AddQuestionModal({
           <div className="plp-form-field">
             <label>Title *</label>
             <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Container With Most Water" autoFocus />
+          </div>
+          <div className="plp-form-field">
+            <label>Problem Description</label>
+            <textarea value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="Describe the problem…" rows={2} />
           </div>
           <div className="plp-form-row2">
             <div className="plp-form-field">
@@ -102,6 +114,18 @@ function AddQuestionModal({
           <div className="plp-form-field">
             <label>Companies (comma separated)</label>
             <input value={companies} onChange={(e) => setCompanies(e.target.value)} placeholder="Google, Amazon, Microsoft" />
+          </div>
+          <div className="plp-form-field">
+            <label>Solution Code</label>
+            <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+              <select value={codeLanguage} onChange={(e) => setCodeLanguage(e.target.value)} style={{ padding: '6px', borderRadius: 4, border: '1px solid var(--border)', background: 'var(--surface2)', color: 'var(--text)' }}>
+                <option value="python3">Python</option>
+                <option value="javascript">JavaScript</option>
+                <option value="java">Java</option>
+                <option value="cpp">C++</option>
+              </select>
+            </div>
+            <textarea value={customCode} onChange={(e) => setCustomCode(e.target.value)} placeholder="Paste your code here..." rows={4} style={{ fontFamily: 'monospace' }} />
           </div>
         </div>
         <div className="plp-modal-footer">

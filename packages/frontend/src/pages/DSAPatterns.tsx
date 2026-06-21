@@ -184,6 +184,8 @@ function AddQuestionModal({
   const [companies, setCompanies] = useState('');
   const [tc1Input, setTc1Input] = useState('');
   const [tc1Expected, setTc1Expected] = useState('');
+  const [customCode, setCustomCode] = useState('');
+  const [codeLanguage, setCodeLanguage] = useState('python3');
   const [fetchingLC, setFetchingLC] = useState(false);
   const [metaData, setMetaData] = useState<any>(null);
 
@@ -211,6 +213,10 @@ function AddQuestionModal({
 
   const submit = () => {
     if (!title.trim()) return;
+    const newMetaData = metaData || {};
+    if (customCode.trim()) {
+      newMetaData.codeSnippets = [{ langSlug: codeLanguage, code: customCode }];
+    }
     onAdd({
       id: 'custom-' + Date.now(),
       title: title.trim(),
@@ -223,7 +229,7 @@ function AddQuestionModal({
       companies: companies.split(',').map((c) => c.trim()).filter(Boolean),
       leetcodeLink: lcLink.trim() || undefined,
       addedAt: new Date().toISOString(),
-      metaData,
+      metaData: Object.keys(newMetaData).length > 0 ? newMetaData : undefined,
     });
     onClose();
   };
@@ -283,6 +289,18 @@ function AddQuestionModal({
               <label>Expected Output</label>
               <input value={tc1Expected} onChange={(e) => setTc1Expected(e.target.value)} placeholder='e.g. [0,1]' />
             </div>
+          </div>
+          <div className="form-field">
+            <label>Solution Code</label>
+            <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+              <select value={codeLanguage} onChange={(e) => setCodeLanguage(e.target.value)} style={{ padding: '6px', borderRadius: 4, border: '1px solid var(--border)', background: 'var(--surface2)', color: 'var(--text)' }}>
+                <option value="python3">Python</option>
+                <option value="javascript">JavaScript</option>
+                <option value="java">Java</option>
+                <option value="cpp">C++</option>
+              </select>
+            </div>
+            <textarea value={customCode} onChange={(e) => setCustomCode(e.target.value)} placeholder="Paste your code here..." rows={4} style={{ fontFamily: 'monospace' }} />
           </div>
         </div>
         <div className="modal-footer">

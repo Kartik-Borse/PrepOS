@@ -678,7 +678,7 @@ export default function ProblemDetail() {
           <div className="pd-list-wrap" style={{ position: 'relative' }}>
             <button
               className={`pd-icon-btn ${problemLists.some(l => l.items.some(i => i.problemId === id)) ? 'active' : ''}`}
-              onClick={() => setShowListMenu(v => !v)}
+              onClick={(e) => { e.stopPropagation(); setShowListMenu(v => !v); }}
               title="Save to List"
               aria-label="Save to list"
             >
@@ -879,9 +879,14 @@ export default function ProblemDetail() {
                 />
                 <div className="notes-footer">
                   <span className="notes-tip">Supports markdown — use **bold**, `code`, - lists</span>
-                  <button className="save-note-btn" onClick={saveNote}>
-                    {noteSaved ? '✓ Saved' : 'Save Note'}
-                  </button>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button className="save-note-btn" style={{ background: 'transparent', color: 'var(--text-dim)', border: '1px solid var(--border)' }} onClick={() => setNoteText(prev => prev + (prev ? '\n\n' : '') + '### Intuition\n\n### Approach\n\n### Complexity\n- Time Complexity: $O()$\n- Space Complexity: $O()$\n')}>
+                      Insert Template
+                    </button>
+                    <button className="save-note-btn" onClick={saveNote}>
+                      {noteSaved ? '✓ Saved' : 'Save Note'}
+                    </button>
+                  </div>
                 </div>
               </div>
             )}
