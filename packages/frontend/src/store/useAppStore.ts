@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { deleteAttachmentsByNoteId } from '../lib/notesDB';
 
 // ── Types ──────────────────────────────────────────────
 
@@ -364,7 +365,12 @@ export const useAppStore = create<AppState>()(
       notes: [],
       addNote: (n) => set((s) => ({ notes: [n, ...s.notes] })),
       updateNote: (id, u) => set((s) => ({ notes: s.notes.map((n) => n.id === id ? { ...n, ...u, updatedAt: new Date().toISOString() } : n) })),
-      deleteNote: (id) => set((s) => ({ notes: s.notes.filter((n) => n.id !== id) })),
+      deleteNote: (id) => {
+        deleteAttachmentsByNoteId(id).catch((err) => {
+          console.error('Failed to delete attachments for note:', id, err);
+        });
+        return set((s) => ({ notes: s.notes.filter((n) => n.id !== id) }));
+      },
       touchNote: (id) => set((s) => ({ notes: s.notes.map((n) => n.id === id ? { ...n, lastVisited: new Date().toISOString() } : n) })),
 
       hrQuestions: DEFAULT_HR_QUESTIONS,
