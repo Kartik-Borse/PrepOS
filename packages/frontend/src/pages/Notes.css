@@ -2,14 +2,84 @@
 
 .notes-layout { display: grid; grid-template-columns: 300px 1fr; gap: 0; flex: 1; overflow: hidden; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); }
 
+/* Modal shared (for New Folder modal) */
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.65); display: flex; align-items: center; justify-content: center; z-index: 1000; backdrop-filter: blur(4px); }
+.modal-box { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; width: 480px; max-width: 95vw; animation: scaleIn 0.2s ease; }
+.modal-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid var(--border); }
+.modal-header h3 { font-size: 15px; font-weight: 700; }
+.modal-header button { color: var(--text-dim); background: none; border: none; cursor: pointer; }
+.modal-header button:hover { color: var(--error); }
+.modal-body { padding: 20px; display: flex; flex-direction: column; gap: 14px; }
+.modal-footer { display: flex; justify-content: flex-end; gap: 10px; padding: 14px 20px; border-top: 1px solid var(--border); }
+.btn-cancel { padding: 7px 16px; border-radius: 8px; border: 1px solid var(--border); background: none; color: var(--text-dim); font-size: 13px; cursor: pointer; }
+.btn-primary-sm { padding: 7px 18px; border-radius: 8px; background: var(--primary); color: #000; font-size: 13px; font-weight: 700; border: none; cursor: pointer; }
+.btn-primary-sm:disabled { opacity: 0.4; cursor: not-allowed; }
+
+
 /* Sidebar */
 .notes-sidebar { border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }
 
 .notes-sidebar-header { display: flex; align-items: center; justify-content: space-between; padding: 16px; border-bottom: 1px solid var(--border); }
 .notes-sidebar-header h1 { font-size: 18px; font-weight: 700; }
 
+.nsb-actions { display: flex; align-items: center; gap: 6px; }
+.nsb-btn { width: 28px; height: 28px; border-radius: 7px; background: var(--surface2); color: var(--text-dim); border: 1px solid var(--border); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.15s; }
+.nsb-btn:hover { background: var(--primary-dim); border-color: var(--primary); color: var(--primary); }
+
 .new-note-btn { width: 30px; height: 30px; border-radius: 8px; background: var(--primary); color: #000; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; font-weight: 700; }
 .new-note-btn:hover { opacity: 0.9; }
+
+/* ── Folder styles ── */
+.notes-folder { border-bottom: 1px solid var(--border); }
+
+.nf-header { display: flex; align-items: center; gap: 6px; padding: 8px 10px 8px 8px; cursor: pointer; transition: background 0.12s; user-select: none; position: relative; }
+.nf-header:hover { background: var(--surface2); }
+.nf-header.active { background: var(--primary-dim); }
+
+.nf-toggle { width: 20px; height: 20px; border-radius: 4px; border: none; background: none; color: var(--text-dim); cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: color 0.1s; }
+.nf-toggle:hover { color: var(--text); }
+
+.nf-icon { color: var(--text-dim); flex-shrink: 0; }
+.nf-header.active .nf-icon { color: var(--primary); }
+
+.nf-name { font-size: 12px; font-weight: 600; color: var(--text-dim); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nf-header.active .nf-name { color: var(--primary); }
+
+.nf-rename-input { flex: 1; font-size: 12px; font-weight: 600; background: var(--surface); border: 1px solid var(--primary); border-radius: 4px; padding: 2px 6px; color: var(--text); outline: none; }
+
+.nf-count { font-size: 10px; font-weight: 700; background: var(--border); color: var(--text-faint); padding: 1px 5px; border-radius: 10px; flex-shrink: 0; }
+
+.nf-actions { display: flex; gap: 3px; flex-shrink: 0; opacity: 0; transition: opacity 0.15s; }
+.nf-header:hover .nf-actions { opacity: 1; }
+.nf-action-btn { width: 20px; height: 20px; border-radius: 4px; border: none; background: none; color: var(--text-dim); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.1s; }
+.nf-action-btn:hover { background: var(--surface2); color: var(--text); }
+.nf-action-btn.del:hover { background: rgba(239,71,67,0.12); color: var(--error); }
+
+.nf-notes { padding-left: 8px; border-left: 2px solid var(--border); margin-left: 16px; }
+.nf-empty-hint { font-size: 11px; color: var(--text-faint); padding: 8px 12px; font-style: italic; }
+
+/* No-folder section */
+.notes-unfoldered { }
+.nuf-label { display: flex; align-items: center; gap: 6px; padding: 6px 14px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-faint); border-bottom: 1px solid var(--border); }
+
+/* Note item move-to-folder dropdown */
+.ni-more-wrap { position: relative; margin-left: auto; }
+.ni-more-btn { width: 20px; height: 20px; border-radius: 4px; border: none; background: none; color: var(--text-faint); cursor: pointer; display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.15s; flex-shrink: 0; }
+.note-item:hover .ni-more-btn { opacity: 1; }
+.ni-more-btn:hover { background: var(--surface2); color: var(--text); }
+
+.ni-folder-menu { position: absolute; right: 0; top: 24px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; min-width: 160px; box-shadow: 0 8px 24px rgba(0,0,0,0.4); z-index: 100; overflow: hidden; animation: fadeIn 0.15s ease; }
+.nfm-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-faint); padding: 8px 12px 4px; }
+.nfm-item { width: 100%; text-align: left; padding: 7px 12px; font-size: 12px; color: var(--text-dim); background: none; border: none; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: background 0.1s; }
+.nfm-item:hover { background: var(--surface2); color: var(--text); }
+.nfm-item.active { color: var(--primary); }
+.nfm-empty { font-size: 11px; color: var(--text-faint); padding: 8px 12px; font-style: italic; }
+
+/* Folder modal */
+.nf-modal { max-width: 380px; }
+.nf-name-input { width: 100%; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; font-size: 14px; color: var(--text); outline: none; transition: border-color 0.15s; }
+.nf-name-input:focus { border-color: var(--primary); }
+
 
 .notes-search { display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-bottom: 1px solid var(--border); }
 .ns-icon { color: var(--text-dim); flex-shrink: 0; }

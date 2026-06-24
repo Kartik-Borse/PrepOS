@@ -451,8 +451,8 @@ function SortablePatternCard({ pattern, total, solved, onAddQuestion, onManageQu
           <button className="pc-action-btn view" onClick={onView} title="View problems">
             <ChevronRight size={13} />
           </button>
-          {pattern.isCustom && onDelete && (
-            <button className="pc-action-btn del" onClick={onDelete} title="Delete pattern">
+          {onDelete && (
+            <button className="pc-action-btn del" onClick={onDelete} title={pattern.isCustom ? 'Delete pattern' : 'Hide pattern'}>
               <Trash2 size={13} />
             </button>
           )}
@@ -476,6 +476,7 @@ export default function DSAPatterns() {
     customPatterns, addPattern, deletePattern,
     customProblems, addProblem, deleteProblem,
     hiddenProblems, hideBuiltinProblem,
+    hiddenPatterns, hideBuiltinPattern,
     solvedProblems,
     patternOrder, reorderPatterns,
   } = useAppStore();
@@ -497,7 +498,9 @@ export default function DSAPatterns() {
   const [allProblemsSortBy, setAllProblemsSortBy] = useState<'latest' | 'difficulty-asc' | 'difficulty-desc' | 'title-asc' | 'title-desc' | 'unsolved-first'>('latest');
 
   // Merge and sort patterns — first apply user-defined order
-  const builtinPatterns = BUILTIN_PATTERNS.map((p) => ({ ...p, isCustom: false }));
+  const builtinPatterns = BUILTIN_PATTERNS
+    .filter((p) => !hiddenPatterns.includes(p.id))
+    .map((p) => ({ ...p, isCustom: false }));
   const customPatternsEnriched = customPatterns.map((p) => ({ ...p, count: 0, solved: 0, isCustom: true, desc: p.description }));
   const allPatternsUnordered = [...builtinPatterns, ...customPatternsEnriched];
 
@@ -634,7 +637,14 @@ export default function DSAPatterns() {
                     solved={solved}
                     onAddQuestion={() => setAddQuestionFor({ id: p.id, name: p.name })}
                     onManageQuestions={() => setManageQuestionsFor({ id: p.id, name: p.name })}
-                    onDelete={p.isCustom ? () => deletePattern(p.id as string) : undefined}
+                    onDelete={p.isCustom
+                      ? () => deletePattern(p.id as string)
+                      : () => {
+                          if (confirm(`Hide the "${p.name}" pattern? It will be removed from your board.`)) {
+                            hideBuiltinPattern(p.id);
+                          }
+                        }
+                    }
                     onView={() => navigate(`/dsa/${p.id}`)}
                   />
                 );

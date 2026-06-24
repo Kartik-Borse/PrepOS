@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { CheckCircle2, Trash2, Plus, X, AlertCircle } from 'lucide-react';
+import { CheckCircle2, Trash2, Plus, X, AlertCircle, Pencil } from 'lucide-react';
 import { useAppStore, MistakeEntry } from '../store/useAppStore';
 import './MistakeJournal.css';
 
@@ -21,22 +21,78 @@ const TYPE_DESC: Record<string, string> = {
   'Other':                'Miscellaneous mistake — syntax error, wrong output format, or something that doesn\'t fit the categories above.',
 };
 
-function AddMistakeModal({ onClose, onAdd }: { onClose: () => void; onAdd: (m: MistakeEntry) => void }) {
-  const [title, setTitle] = useState('');
-  const [type, setType] = useState<MistakeEntry['mistakeType']>('Wrong logic');
-  const [note, setNote] = useState('');
+// ── Shared form used by both Add and Edit modals ──────────────────────────────
+function MistakeForm({
+  initialTitle,
+  initialType,
+  initialNote,
+  submitLabel,
+  onClose,
+  onSubmit,
+}: {
+  initialTitle: string;
+  initialType: MistakeEntry['mistakeType'];
+  initialNote: string;
+  submitLabel: string;
+  onClose: () => void;
+  onSubmit: (title: string, type: MistakeEntry['mistakeType'], note: string) => void;
+}) {
+  const [title, setTitle] = useState(initialTitle);
+  const [type, setType] = useState<MistakeEntry['mistakeType']>(initialType);
+  const [note, setNote] = useState(initialNote);
 
   const submit = () => {
     if (!title.trim()) return;
-    onAdd({
-      id: crypto.randomUUID(), problemId: 'manual-' + Date.now(),
-      problemTitle: title.trim(), patternId: '', difficulty: 'Medium',
-      mistakeType: type, note: note.trim(),
-      date: new Date().toISOString(), resolved: false,
-    });
+    onSubmit(title.trim(), type, note.trim());
     onClose();
   };
 
+  return (
+    <>
+      <div className="modal-body">
+        <div className="form-field">
+          <label>Problem Name *</label>
+          <input
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="e.g. Merge Intervals"
+            autoFocus
+          />
+        </div>
+        <div className="form-field">
+          <label>Mistake Type</label>
+          <div className="type-grid">
+            {MISTAKE_TYPES.map((t) => (
+              <button
+                key={t}
+                className={`type-chip ${type === t ? 'active' : ''}`}
+                style={type === t ? { background: TYPE_COLOR[t] + '22', color: TYPE_COLOR[t], borderColor: TYPE_COLOR[t] } : {}}
+                onClick={() => setType(t)}
+              >
+                {t}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="form-field">
+          <label>What went wrong? How to fix?</label>
+          <textarea
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            placeholder="e.g. Forgot to handle empty array. Should check if arr.length === 0 first."
+            rows={3}
+          />
+        </div>
+      </div>
+      <div className="modal-footer">
+        <button className="btn-cancel" onClick={onClose}>Cancel</button>
+        <button className="btn-primary-sm" onClick={submit} disabled={!title.trim()}>{submitLabel}</button>
+      </div>
+    </>
+  );
+}
+
+function AddMistakeModal({ onClose, onAdd }: { onClose: () => void; onAdd: (m: MistakeEntry) => void }) {
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-box" onClick={(e) => e.stopPropagation()}>
@@ -44,41 +100,66 @@ function AddMistakeModal({ onClose, onAdd }: { onClose: () => void; onAdd: (m: M
           <h3>Log a Mistake</h3>
           <button onClick={onClose}><X size={16} /></button>
         </div>
-        <div className="modal-body">
-          <div className="form-field">
-            <label>Problem Name *</label>
-            <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Merge Intervals" autoFocus />
-          </div>
-          <div className="form-field">
-            <label>Mistake Type</label>
-            <div className="type-grid">
-              {MISTAKE_TYPES.map((t) => (
-                <button key={t} className={`type-chip ${type === t ? 'active' : ''}`}
-                  style={type === t ? { background: TYPE_COLOR[t] + '22', color: TYPE_COLOR[t], borderColor: TYPE_COLOR[t] } : {}}
-                  onClick={() => setType(t)}>
-                  {t}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div className="form-field">
-            <label>What went wrong? How to fix?</label>
-            <textarea value={note} onChange={(e) => setNote(e.target.value)}
-              placeholder="e.g. Forgot to handle empty array. Should check if arr.length === 0 first." rows={3} />
-          </div>
+        <MistakeForm
+          initialTitle=""
+          initialType="Wrong logic"
+          initialNote=""
+          submitLabel="Log Mistake"
+          onClose={onClose}
+          onSubmit={(title, type, note) => {
+            onAdd({
+              id: crypto.randomUUID(),
+              problemId: 'manual-' + Date.now(),
+              problemTitle: title,
+              patternId: '',
+              difficulty: 'Medium',
+              mistakeType: type,
+              note,
+              date: new Date().toISOString(),
+              resolved: false,
+            });
+          }}
+        />
+      </div>
+    </div>
+  );
+}
+
+function EditMistakeModal({
+  entry,
+  onClose,
+  onSave,
+}: {
+  entry: MistakeEntry;
+  onClose: () => void;
+  onSave: (id: string, updates: Partial<MistakeEntry>) => void;
+}) {
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-box" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-header">
+          <h3>Edit Mistake</h3>
+          <button onClick={onClose}><X size={16} /></button>
         </div>
-        <div className="modal-footer">
-          <button className="btn-cancel" onClick={onClose}>Cancel</button>
-          <button className="btn-primary-sm" onClick={submit} disabled={!title.trim()}>Log Mistake</button>
-        </div>
+        <MistakeForm
+          initialTitle={entry.problemTitle}
+          initialType={entry.mistakeType}
+          initialNote={entry.note}
+          submitLabel="Save Changes"
+          onClose={onClose}
+          onSubmit={(title, type, note) => {
+            onSave(entry.id, { problemTitle: title, mistakeType: type, note });
+          }}
+        />
       </div>
     </div>
   );
 }
 
 export default function MistakeJournal() {
-  const { mistakes, addMistake, resolveMistake, deleteMistake } = useAppStore();
+  const { mistakes, addMistake, updateMistake, resolveMistake, deleteMistake } = useAppStore();
   const [showAdd, setShowAdd] = useState(false);
+  const [editEntry, setEditEntry] = useState<MistakeEntry | null>(null);
   const [filter, setFilter] = useState<'all' | 'open' | 'resolved'>('all');
   const [typeFilter, setTypeFilter] = useState<string>('All');
 
@@ -113,9 +194,12 @@ export default function MistakeJournal() {
           <span className="mtc-desc">All unresolved mistakes across every category</span>
         </button>
         {MISTAKE_TYPES.map((t) => (
-          <button key={t} className={`mj-type-card ${typeFilter === t ? 'active' : ''}`}
+          <button
+            key={t}
+            className={`mj-type-card ${typeFilter === t ? 'active' : ''}`}
             onClick={() => setTypeFilter(t)}
-            style={typeFilter === t ? { borderColor: TYPE_COLOR[t], background: TYPE_COLOR[t] + '11' } : {}}>
+            style={typeFilter === t ? { borderColor: TYPE_COLOR[t], background: TYPE_COLOR[t] + '11' } : {}}
+          >
             <span className="mtc-count" style={{ color: TYPE_COLOR[t] }}>{typeCounts[t]}</span>
             <span className="mtc-label">{t}</span>
             <span className="mtc-desc">{TYPE_DESC[t]}</span>
@@ -127,7 +211,11 @@ export default function MistakeJournal() {
       <div className="mj-filter-row">
         {(['all', 'open', 'resolved'] as const).map((f) => (
           <button key={f} className={`filter-tab ${filter === f ? 'active' : ''}`} onClick={() => setFilter(f)}>
-            {f === 'all' ? `All (${mistakes.length})` : f === 'open' ? `Open (${mistakes.filter(m => !m.resolved).length})` : `Resolved (${mistakes.filter(m => m.resolved).length})`}
+            {f === 'all'
+              ? `All (${mistakes.length})`
+              : f === 'open'
+              ? `Open (${mistakes.filter(m => !m.resolved).length})`
+              : `Resolved (${mistakes.filter(m => m.resolved).length})`}
           </button>
         ))}
       </div>
@@ -145,7 +233,14 @@ export default function MistakeJournal() {
           <div key={m.id} className={`mj-item ${m.resolved ? 'resolved' : ''}`}>
             <div className="mji-top">
               <div className="mji-left">
-                <span className="mji-type" style={{ background: TYPE_COLOR[m.mistakeType] + '1a', color: TYPE_COLOR[m.mistakeType], borderColor: TYPE_COLOR[m.mistakeType] + '44' }}>
+                <span
+                  className="mji-type"
+                  style={{
+                    background: TYPE_COLOR[m.mistakeType] + '1a',
+                    color: TYPE_COLOR[m.mistakeType],
+                    borderColor: TYPE_COLOR[m.mistakeType] + '44',
+                  }}
+                >
                   {m.mistakeType}
                 </span>
                 <span className="mji-title">{m.problemTitle}</span>
@@ -153,6 +248,13 @@ export default function MistakeJournal() {
               </div>
               <div className="mji-actions">
                 <span className="mji-date">{new Date(m.date).toLocaleDateString()}</span>
+                <button
+                  className="mji-btn edit"
+                  onClick={() => setEditEntry(m)}
+                  title="Edit mistake"
+                >
+                  <Pencil size={13} />
+                </button>
                 {!m.resolved && (
                   <button className="mji-btn resolve" onClick={() => resolveMistake(m.id)} title="Mark resolved">
                     <CheckCircle2 size={14} />
@@ -169,6 +271,13 @@ export default function MistakeJournal() {
       </div>
 
       {showAdd && <AddMistakeModal onClose={() => setShowAdd(false)} onAdd={addMistake} />}
+      {editEntry && (
+        <EditMistakeModal
+          entry={editEntry}
+          onClose={() => setEditEntry(null)}
+          onSave={(id, updates) => { updateMistake(id, updates); setEditEntry(null); }}
+        />
+      )}
     </div>
   );
 }

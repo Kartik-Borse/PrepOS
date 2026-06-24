@@ -110,6 +110,13 @@ export interface Note {
   createdAt: string;
   updatedAt: string;
   lastVisited: string;
+  folderId?: string;
+}
+
+export interface NoteFolder {
+  id: string;
+  name: string;
+  createdAt: string;
 }
 
 export interface HRQuestion {
@@ -212,6 +219,7 @@ interface AppState {
 
   mistakes: MistakeEntry[];
   addMistake: (m: MistakeEntry) => void;
+  updateMistake: (id: string, updates: Partial<MistakeEntry>) => void;
   resolveMistake: (id: string) => void;
   deleteMistake: (id: string) => void;
 
@@ -242,6 +250,11 @@ interface AppState {
   deleteNote: (id: string) => void;
   touchNote: (id: string) => void;
 
+  noteFolders: NoteFolder[];
+  addFolder: (f: NoteFolder) => void;
+  renameFolder: (id: string, name: string) => void;
+  deleteFolder: (id: string) => void;
+
   hrQuestions: HRQuestion[];
   setHRAnswer: (id: string, answer: string) => void;
 
@@ -252,6 +265,10 @@ interface AppState {
   customPatterns: CustomPattern[];
   addPattern: (p: CustomPattern) => void;
   deletePattern: (id: string) => void;
+
+  hiddenPatterns: string[];
+  hideBuiltinPattern: (id: string) => void;
+  unhideBuiltinPattern: (id: string) => void;
 
   // Pattern ordering (array of pattern IDs in user-defined order)
   patternOrder: string[];
@@ -323,6 +340,7 @@ export const useAppStore = create<AppState>()(
 
       mistakes: [],
       addMistake: (m) => set((s) => ({ mistakes: [m, ...s.mistakes] })),
+      updateMistake: (id, u) => set((s) => ({ mistakes: s.mistakes.map((m) => m.id === id ? { ...m, ...u } : m) })),
       resolveMistake: (id) => set((s) => ({ mistakes: s.mistakes.map((m) => m.id === id ? { ...m, resolved: true } : m) })),
       deleteMistake: (id) => set((s) => ({ mistakes: s.mistakes.filter((m) => m.id !== id) })),
 
@@ -373,6 +391,14 @@ export const useAppStore = create<AppState>()(
       },
       touchNote: (id) => set((s) => ({ notes: s.notes.map((n) => n.id === id ? { ...n, lastVisited: new Date().toISOString() } : n) })),
 
+      noteFolders: [],
+      addFolder: (f) => set((s) => ({ noteFolders: [...s.noteFolders, f] })),
+      renameFolder: (id, name) => set((s) => ({ noteFolders: s.noteFolders.map((f) => f.id === id ? { ...f, name } : f) })),
+      deleteFolder: (id) => set((s) => ({
+        noteFolders: s.noteFolders.filter((f) => f.id !== id),
+        notes: s.notes.map((n) => n.folderId === id ? { ...n, folderId: undefined } : n),
+      })),
+
       hrQuestions: DEFAULT_HR_QUESTIONS,
       setHRAnswer: (id, answer) =>
         set((s) => ({ hrQuestions: s.hrQuestions.map((q) => q.id === id ? { ...q, myAnswer: answer, updatedAt: new Date().toISOString() } : q) })),
@@ -390,6 +416,15 @@ export const useAppStore = create<AppState>()(
           customProblems: s.customProblems.filter((p) => p.patternId !== id),
           patternOrder: s.patternOrder.filter((oid) => oid !== id),
         })),
+
+      hiddenPatterns: [],
+      hideBuiltinPattern: (id) =>
+        set((s) => ({
+          hiddenPatterns: [...s.hiddenPatterns, id],
+          patternOrder: s.patternOrder.filter((oid) => oid !== id),
+        })),
+      unhideBuiltinPattern: (id) =>
+        set((s) => ({ hiddenPatterns: s.hiddenPatterns.filter((p) => p !== id) })),
 
       patternOrder: [],
       reorderPatterns: (newOrder) => set(() => ({ patternOrder: newOrder })),
